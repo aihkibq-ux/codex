@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>总览 - Share Everything</title>
+    <title>总览 — Share Everything</title>
     <meta name="description" content="探索所有文章，按分类浏览，搜索你感兴趣的内容。" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,29 +12,10 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/style.css" />
-    <script src="https://unpkg.com/swup@4"></script>
-    <script src="https://unpkg.com/@swup/scripts-plugin@2"></script>
   </head>
   <body>
-    <!-- Cursor Glow -->
-    <div class="cursor-glow" id="cursorGlow"></div>
-
-    <!-- Ambient Background -->
-    <div class="ambient-background">
-      <div class="glow-orb orb-1"></div>
-      <div class="glow-orb orb-2"></div>
-      <div class="glow-orb orb-3"></div>
-      <div class="glow-orb orb-4"></div>
-      <div class="glow-orb orb-5"></div>
-    </div>
-
-    <!-- Particles -->
-    <canvas id="particles-canvas"></canvas>
-
-    <!-- Content Wrapper for Swup -->
-    <main id="swup" class="transition-fade">
-      <!-- Top Actions -->
-      <div class="top-actions" id="topActions">
+    <!-- Top Actions -->
+    <div class="top-actions" id="topActions">
       <a href="index.html" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -58,11 +39,25 @@
       </a>
     </div>
 
+    <!-- Cursor Glow -->
+    <div class="cursor-glow" id="cursorGlow"></div>
+
+    <!-- Ambient Background -->
+    <div class="ambient-background">
+      <div class="glow-orb orb-1"></div>
+      <div class="glow-orb orb-2"></div>
+      <div class="glow-orb orb-3"></div>
+      <div class="glow-orb orb-4"></div>
+      <div class="glow-orb orb-5"></div>
+    </div>
+
+    <!-- Particles -->
+    <canvas id="particles-canvas"></canvas>
+
     <!-- Content -->
     <div class="page-container">
       <div class="page-header">
         <h1 class="page-title">总览</h1>
-        <p class="page-subtitle">探索技术、设计与灵感的交汇点</p>
       </div>
 
       <!-- Search -->
@@ -103,14 +98,12 @@
       <!-- Pagination -->
       <div class="pagination" id="pagination"></div>
     </div>
-    </main>
 
     <script src="js/common.js"></script>
     <script src="js/notion-api.js"></script>
     <script>
-      (() => {
-/* ===== State ===== */
-      let currentCategory = "\u5168\u90e8";
+      /* ===== State ===== */
+      let currentCategory = "全部";
       let currentSearch = "";
       let currentPage = 1;
 
@@ -120,9 +113,34 @@
       if (params.get("search")) currentSearch = params.get("search");
       if (params.get("page")) currentPage = parseInt(params.get("page")) || 1;
 
+      /* ===== Update UI ===== */
+      function updatePageUI() {
+        const titleEl = document.querySelector(".page-title");
+        if (titleEl) {
+          titleEl.textContent = currentCategory === "全部" ? "总览" : currentCategory;
+        }
+
+        const topActions = document.querySelectorAll(".top-actions .action-btn");
+        topActions.forEach(btn => btn.classList.remove("active"));
+        
+        topActions.forEach(btn => {
+          const span = btn.querySelector("span");
+          if (span) {
+            const text = span.textContent.trim();
+            if (currentCategory === "收藏" && text === "收藏") {
+              btn.classList.add("active");
+            } else if (currentCategory !== "收藏" && text === "总览") {
+              btn.classList.add("active");
+            }
+          }
+        });
+      }
+
+      updatePageUI();
+
       /* ===== Render Filters ===== */
       const filtersEl = document.getElementById("blogFilters");
-      const categories = window.NotionAPI?.getCategories?.() || [];
+      const categories = NotionAPI.getCategories();
 
       categories.forEach((cat) => {
         const btn = document.createElement("button");
@@ -132,6 +150,7 @@
           currentCategory = cat.name;
           currentPage = 1;
           updateURL();
+          updatePageUI();
           renderPosts();
           // Update active state
           filtersEl.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
@@ -162,7 +181,6 @@
 
       async function renderPosts() {
         try {
-          if (!window.NotionAPI) throw new Error("NotionAPI missing");
           const data = await NotionAPI.queryPosts({
             category: currentCategory,
             search: currentSearch,
@@ -187,33 +205,31 @@
 
           // Save to reading history
           saveHistory();
-        } catch (err) {
-          console.error("Failed to load posts", err);
+        } catch (error) {
+          console.error("Failed to load posts:", error);
           gridEl.innerHTML = "";
           emptyEl.style.display = "flex";
           paginationEl.innerHTML = "";
         }
       }
+
       function renderCard(post) {
         const categoryColors = {
-          "\u6280\u672f": "rgba(41, 121, 255, 0.1); color: #2979ff; border-color: rgba(41, 121, 255, 0.2)",
-          "\u8bbe\u8ba1": "rgba(255, 64, 129, 0.1); color: #ff4081; border-color: rgba(255, 64, 129, 0.2)",
-          "\u968f\u60f3": "rgba(213, 0, 249, 0.1); color: #d500f9; border-color: rgba(213, 0, 249, 0.2)",
-          "\u6559\u7a0b": "rgba(0, 230, 118, 0.1); color: #00e676; border-color: rgba(0, 230, 118, 0.2)",
-          "\u5de5\u5177": "rgba(255, 171, 0, 0.1); color: #ffab00; border-color: rgba(255, 171, 0, 0.2)",
-          "\u6536\u85cf": "rgba(255, 200, 0, 0.1); color: #ffc800; border-color: rgba(255, 200, 0, 0.2)",
+          "技术": "rgba(41, 121, 255, 0.1); color: #2979ff; border-color: rgba(41, 121, 255, 0.2)",
+          "精选": "rgba(255, 64, 129, 0.1); color: #ff4081; border-color: rgba(255, 64, 129, 0.2)",
+          "随想": "rgba(213, 0, 249, 0.1); color: #d500f9; border-color: rgba(213, 0, 249, 0.2)",
+          "教程": "rgba(0, 230, 118, 0.1); color: #00e676; border-color: rgba(0, 230, 118, 0.2)",
+          "工具": "rgba(255, 171, 0, 0.1); color: #ffab00; border-color: rgba(255, 171, 0, 0.2)",
         };
 
-        const catStyle =
-          categoryColors[post.category] ||
-          "rgba(0, 229, 255, 0.1); color: #00e5ff; border-color: rgba(0, 229, 255, 0.2)";
+        const catStyle = categoryColors[post.category] || "rgba(0, 229, 255, 0.1); color: #00e5ff; border-color: rgba(0, 229, 255, 0.2)";
 
         const coverHtml = post.coverImage
           ? `<div class="blog-card-cover-placeholder blog-card-cover-img">
                <img src="${post.coverImage}" alt="${post.title}" loading="lazy" onerror="this.parentElement.classList.remove('blog-card-cover-img');this.remove()">
              </div>`
           : `<div class="blog-card-cover-placeholder" style="background: ${post.coverGradient || 'linear-gradient(135deg, #1a1a2e, #16213e)'}">
-               <span>${post.coverEmoji || '\uD83D\uDCDD'}</span>
+               <span>${post.coverEmoji || '📝'}</span>
              </div>`;
         return `
           <a href="post.html?id=${post.id}" class="blog-card" data-reveal>
@@ -271,7 +287,7 @@
       /* ===== URL Management ===== */
       function updateURL() {
         const params = new URLSearchParams();
-        if (currentCategory !== "\u5168\u90e8") params.set("category", currentCategory);
+        if (currentCategory !== "全部") params.set("category", currentCategory);
         if (currentSearch) params.set("search", currentSearch);
         if (currentPage > 1) params.set("page", currentPage);
         const qs = params.toString();
@@ -298,16 +314,6 @@
 
       /* ===== Init ===== */
       renderPosts();
-})();
     </script>
   </body>
 </html>
-
-
-
-
-
-
-
-
-
