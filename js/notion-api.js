@@ -1,27 +1,32 @@
-/**
+﻿/**
  * notion-api.js - Notion API integration layer
  */
 
 const NotionAPI = (() => {
-  // ====== Config ======
   const CONFIG = {
     workerUrl: "https://restless-wood-e19f.aihkibq.workers.dev/v1",
     databaseId: "32485b780a2580eaa67ecf051676d693",
     pageSize: 9,
   };
 
-  // ====== Fixed category list (Notion has no dynamic category API) ======
+  const CATEGORY_ALL = "\u5168\u90e8"; // 全部
+  const CATEGORY_TECH = "\u6280\u672f"; // 技术
+  const CATEGORY_DESIGN = "\u8bbe\u8ba1"; // 设计
+  const CATEGORY_THOUGHTS = "\u968f\u60f3"; // 随想
+  const CATEGORY_TUTORIAL = "\u6559\u7a0b"; // 教程
+  const CATEGORY_TOOL = "\u5de5\u5177"; // 工具
+  const CATEGORY_FAVORITE = "\u6536\u85cf"; // 收藏
+
   const CATEGORIES = [
-    { name: "全部", emoji: "🔍", color: "cyan" },
-    { name: "技术", emoji: "💻", color: "blue" },
-    { name: "设计", emoji: "🎨", color: "pink" },
-    { name: "随想", emoji: "🧠", color: "purple" },
-    { name: "教程", emoji: "📘", color: "green" },
-    { name: "工具", emoji: "🧰", color: "orange" },
-    { name: "收藏", emoji: "🔖", color: "orange" },
+    { name: CATEGORY_ALL, emoji: "\uD83D\uDD0D", color: "cyan" },
+    { name: CATEGORY_TECH, emoji: "\uD83D\uDCBB", color: "blue" },
+    { name: CATEGORY_DESIGN, emoji: "\uD83C\uDFA8", color: "pink" },
+    { name: CATEGORY_THOUGHTS, emoji: "\uD83E\uDDE0", color: "purple" },
+    { name: CATEGORY_TUTORIAL, emoji: "\uD83D\uDCD8", color: "green" },
+    { name: CATEGORY_TOOL, emoji: "\uD83E\uDDF0", color: "orange" },
+    { name: CATEGORY_FAVORITE, emoji: "\uD83D\uDD16", color: "orange" },
   ];
 
-  // ====== Notion API ======
   async function fetchFromNotion(category, fetchAll = false) {
     const cacheKey = `notion_query_${category || "all"}_${fetchAll}`;
     try {
@@ -39,7 +44,7 @@ const NotionAPI = (() => {
       sorts: [{ property: "Date", direction: "descending" }],
     };
 
-    if (category && category !== "全部") {
+    if (category && category !== CATEGORY_ALL) {
       body.filter = {
         property: "Category",
         select: { equals: category },
@@ -76,7 +81,6 @@ const NotionAPI = (() => {
     const needAll = Boolean(search);
     let results = await fetchFromNotion(category, needAll);
 
-    // In-memory search
     if (search) {
       const q = search.toLowerCase();
       results = results.filter(
@@ -87,7 +91,6 @@ const NotionAPI = (() => {
       );
     }
 
-    // Pagination slice
     const total = results.length;
     const totalPages = Math.max(1, Math.ceil(total / CONFIG.pageSize));
     const currentPage = Math.min(page, totalPages);
@@ -137,7 +140,6 @@ const NotionAPI = (() => {
     return mappedData;
   }
 
-  // ====== Data mapping ======
   function mapNotionPage(page) {
     const props = page.properties || {};
     const category = props.Category?.select?.name || "";
@@ -151,7 +153,7 @@ const NotionAPI = (() => {
       date: props.Date?.date?.start || "",
       readTime: props.ReadTime?.rich_text?.[0]?.plain_text || "",
       coverImage,
-      coverEmoji: page.icon?.emoji || "📝",
+      coverEmoji: page.icon?.emoji || "\uD83D\uDCDD",
       coverGradient: gradientForCategory(category),
       tags: props.Tags?.multi_select?.map((t) => t.name) || [],
     };
@@ -159,12 +161,12 @@ const NotionAPI = (() => {
 
   function gradientForCategory(category) {
     const map = {
-      技术: "linear-gradient(135deg, #0d1b4b, #1a3a6b)",
-      设计: "linear-gradient(135deg, #3b0a45, #6d1a7e)",
-      随想: "linear-gradient(135deg, #1a0a3b, #3d1a7e)",
-      教程: "linear-gradient(135deg, #0a2e1a, #1a5c35)",
-      工具: "linear-gradient(135deg, #2e1a00, #5c3800)",
-      收藏: "linear-gradient(135deg, #2e2a00, #5c5200)",
+      [CATEGORY_TECH]: "linear-gradient(135deg, #0d1b4b, #1a3a6b)",
+      [CATEGORY_DESIGN]: "linear-gradient(135deg, #3b0a45, #6d1a7e)",
+      [CATEGORY_THOUGHTS]: "linear-gradient(135deg, #1a0a3b, #3d1a7e)",
+      [CATEGORY_TUTORIAL]: "linear-gradient(135deg, #0a2e1a, #1a5c35)",
+      [CATEGORY_TOOL]: "linear-gradient(135deg, #2e1a00, #5c3800)",
+      [CATEGORY_FAVORITE]: "linear-gradient(135deg, #2e2a00, #5c5200)",
     };
     return map[category] || "linear-gradient(135deg, #1a1a2e, #16213e)";
   }
@@ -215,7 +217,6 @@ const NotionAPI = (() => {
     return handlers[type]?.() ?? { type: "unsupported" };
   }
 
-  // ====== Rich text helpers ======
   function richTextToHtml(richText) {
     if (!richText?.length) return "";
     return richText
@@ -239,7 +240,6 @@ const NotionAPI = (() => {
     return (richText || []).map((t) => t.plain_text).join("");
   }
 
-  // ====== Block -> HTML renderer ======
   function renderBlocks(blocks) {
     let html = "";
     let listStack = [];
@@ -313,7 +313,6 @@ const NotionAPI = (() => {
       .replace(/"/g, "&quot;");
   }
 
-  // ====== Public API ======
   return {
     getCategories: () => CATEGORIES,
     queryPosts: (options = {}) => liveQueryDatabase(options),
