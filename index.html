@@ -1,10 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Share Everything</title>
-    <meta name="description" content="Share Everything — 探索、记录、分享" />
+    <meta name="description" content="Share Everything - 探索、记录、分享" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -112,7 +112,8 @@
 
     <script src="js/common.js"></script>
     <script>
-      /* ===== Search → Blog ===== */
+      (() => {
+/* ===== Search → Blog ===== */
       const searchInput = document.getElementById("heroSearch");
       const searchIcon = document.querySelector(".search-icon");
 
@@ -139,6 +140,11 @@
       document.getElementById("ctaHome").addEventListener("click", () => navigateTo("blog.html"));
       document.getElementById("ctaStart").addEventListener("click", () => navigateTo("blog.html"));
       document.getElementById("ctaWiki").addEventListener("click", () => navigateTo("blog.html?category=收藏"));
+})();
     </script>
   </body>
 </html>
+
+
+
+

@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>鏂囩珷 鈥?Share Everything</title>
-    <meta name="description" content="闃呰鏂囩珷璇︽儏" />
+    <title>文章 - Share Everything</title>
+    <meta name="description" content="阅读文章详情" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -40,21 +40,21 @@
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
-        <span>棣栭〉</span>
+        <span>首页</span>
       </a>
       <a href="blog.html" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
         </svg>
-        <span>鎬昏</span>
+        <span>总览</span>
       </a>
-      <a href="blog.html?category=鏀惰棌" class="action-btn">
+      <a href="blog.html?category=收藏" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
-        <span>鏀惰棌</span>
+        <span>收藏</span>
       </a>
     </div>
 
@@ -67,7 +67,7 @@
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
-          杩斿洖鍒楄〃
+          返回列表
         </button>
 
         <!-- Loading Skeleton -->
@@ -93,9 +93,9 @@
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
         <polyline points="14 2 14 8 20 8"></polyline>
       </svg>
-      <p>鏂囩珷涓嶅瓨鍦?/p>
+      <p>文章不存在</p>
       <p style="font-size: 0.85rem;">
-        <a href="blog.html" style="color: var(--accent-cyan); text-decoration: none;">杩斿洖鍗氬鍒楄〃</a>
+        <a href="blog.html" style="color: var(--accent-cyan); text-decoration: none;">返回博客列表</a>
       </p>
     </div>
     </main>
@@ -103,7 +103,8 @@
     <script src="js/common.js"></script>
     <script src="js/notion-api.js"></script>
     <script>
-      /* ===== Load Post ===== */
+      (() => {
+/* ===== Load Post ===== */
       const params = new URLSearchParams(window.location.search);
       const postId = params.get("id");
 
@@ -118,6 +119,8 @@
             return;
           }
 
+          if (!window.NotionAPI) throw new Error("NotionAPI missing");
+
           const post = await NotionAPI.getPost(postId);
 
           if (!post) {
@@ -126,7 +129,7 @@
           }
 
           // Update page title
-          document.title = `${post.title} 鈥?Share Everything`;
+          document.title = `${post.title} -Share Everything`;
           document.querySelector('meta[name="description"]').content = post.excerpt || post.title;
 
           // Category colors
@@ -217,9 +220,17 @@
 
       /* ===== Init ===== */
       loadPost();
+})();
     </script>
   </body>
 </html>
+
+
+
+
+
+
+
 
 
 
