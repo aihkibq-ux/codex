@@ -1,34 +1,34 @@
 /**
- * notion-api.js — Notion API 集成层
+ * notion-api.js - Notion API integration layer
  */
 
 const NotionAPI = (() => {
-  // ====== 配置 ======
+  // ====== Config ======
   const CONFIG = {
     workerUrl: "https://restless-wood-e19f.aihkibq.workers.dev/v1",
     databaseId: "32485b780a2580eaa67ecf051676d693",
     pageSize: 9,
   };
 
-  // ====== 分类固定列表（Notion 不提供动态获取接口） ======
+  // ====== Fixed category list (Notion has no dynamic category API) ======
   const CATEGORIES = [
-    { name: "全部", emoji: "📋", color: "cyan" },
+    { name: "全部", emoji: "🔍", color: "cyan" },
     { name: "技术", emoji: "💻", color: "blue" },
     { name: "设计", emoji: "🎨", color: "pink" },
-    { name: "随想", emoji: "💭", color: "purple" },
-    { name: "教程", emoji: "📖", color: "green" },
-    { name: "工具", emoji: "🔧", color: "orange" },
-    { name: "收藏", emoji: "⭐", color: "orange" },
+    { name: "随想", emoji: "🧠", color: "purple" },
+    { name: "教程", emoji: "📘", color: "green" },
+    { name: "工具", emoji: "🧰", color: "orange" },
+    { name: "收藏", emoji: "🔖", color: "orange" },
   ];
 
-  // ====== Notion API 调用 ======
+  // ====== Notion API ======
   async function fetchFromNotion(category, fetchAll = false) {
     const cacheKey = `notion_query_${category || "all"}_${fetchAll}`;
     try {
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Date.now() - parsed.timestamp < 1000 * 60 * 5) { // 5 分钟缓存
+        if (Date.now() - parsed.timestamp < 1000 * 60 * 5) {
           return parsed.data;
         }
       }
@@ -52,7 +52,7 @@ const NotionAPI = (() => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-      }
+      },
     );
 
     if (!res.ok) throw new Error(`Notion API error: ${res.status}`);
@@ -60,32 +60,34 @@ const NotionAPI = (() => {
     const mappedData = data.results.map(mapNotionPage);
 
     try {
-      sessionStorage.setItem(cacheKey, JSON.stringify({
-        timestamp: Date.now(),
-        data: mappedData
-      }));
+      sessionStorage.setItem(
+        cacheKey,
+        JSON.stringify({
+          timestamp: Date.now(),
+          data: mappedData,
+        }),
+      );
     } catch (e) {}
 
     return mappedData;
   }
 
   async function liveQueryDatabase({ category, search, page = 1 }) {
-    // 有搜索词时拉取全量再内存过滤；否则只取一页
     const needAll = Boolean(search);
     let results = await fetchFromNotion(category, needAll);
 
-    // 内存搜索过滤
+    // In-memory search
     if (search) {
       const q = search.toLowerCase();
       results = results.filter(
         (p) =>
           p.title.toLowerCase().includes(q) ||
           p.excerpt.toLowerCase().includes(q) ||
-          (p.tags || []).some((t) => t.toLowerCase().includes(q))
+          (p.tags || []).some((t) => t.toLowerCase().includes(q)),
       );
     }
 
-    // 分页切片
+    // Pagination slice
     const total = results.length;
     const totalPages = Math.max(1, Math.ceil(total / CONFIG.pageSize));
     const currentPage = Math.min(page, totalPages);
@@ -101,7 +103,7 @@ const NotionAPI = (() => {
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Date.now() - parsed.timestamp < 1000 * 60 * 10) { // 10 分钟缓存
+        if (Date.now() - parsed.timestamp < 1000 * 60 * 10) {
           return parsed.data;
         }
       }
@@ -123,22 +125,24 @@ const NotionAPI = (() => {
     };
 
     try {
-      sessionStorage.setItem(cacheKey, JSON.stringify({
-        timestamp: Date.now(),
-        data: mappedData
-      }));
+      sessionStorage.setItem(
+        cacheKey,
+        JSON.stringify({
+          timestamp: Date.now(),
+          data: mappedData,
+        }),
+      );
     } catch (e) {}
 
     return mappedData;
   }
 
-  // ====== 数据映射 ======
+  // ====== Data mapping ======
   function mapNotionPage(page) {
     const props = page.properties || {};
     const category = props.Category?.select?.name || "";
     const cover = page.cover;
-    const coverImage =
-      cover?.external?.url || cover?.file?.url || null;
+    const coverImage = cover?.external?.url || cover?.file?.url || null;
     return {
       id: page.id,
       title: props.Name?.title?.[0]?.plain_text || "Untitled",
@@ -168,14 +172,39 @@ const NotionAPI = (() => {
   function mapNotionBlock(block) {
     const type = block.type;
     const handlers = {
-      paragraph: () => ({ type, text: richTextToHtml(block.paragraph.rich_text) }),
-      heading_1: () => ({ type, text: richTextToHtml(block.heading_1.rich_text) }),
-      heading_2: () => ({ type, text: richTextToHtml(block.heading_2.rich_text) }),
-      heading_3: () => ({ type, text: richTextToHtml(block.heading_3.rich_text) }),
-      bulleted_list_item: () => ({ type, text: richTextToHtml(block.bulleted_list_item.rich_text) }),
-      numbered_list_item: () => ({ type, text: richTextToHtml(block.numbered_list_item.rich_text) }),
-      code: () => ({ type, language: block.code.language || "", text: richTextToPlain(block.code.rich_text) }),
-      quote: () => ({ type, text: richTextToHtml(block.quote.rich_text) }),
+      paragraph: () => ({
+        type,
+        text: richTextToHtml(block.paragraph.rich_text),
+      }),
+      heading_1: () => ({
+        type,
+        text: richTextToHtml(block.heading_1.rich_text),
+      }),
+      heading_2: () => ({
+        type,
+        text: richTextToHtml(block.heading_2.rich_text),
+      }),
+      heading_3: () => ({
+        type,
+        text: richTextToHtml(block.heading_3.rich_text),
+      }),
+      bulleted_list_item: () => ({
+        type,
+        text: richTextToHtml(block.bulleted_list_item.rich_text),
+      }),
+      numbered_list_item: () => ({
+        type,
+        text: richTextToHtml(block.numbered_list_item.rich_text),
+      }),
+      code: () => ({
+        type,
+        language: block.code.language || "",
+        text: richTextToPlain(block.code.rich_text),
+      }),
+      quote: () => ({
+        type,
+        text: richTextToHtml(block.quote.rich_text),
+      }),
       divider: () => ({ type: "divider" }),
       image: () => ({
         type: "image",
@@ -186,29 +215,31 @@ const NotionAPI = (() => {
     return handlers[type]?.() ?? { type: "unsupported" };
   }
 
-  // ====== 富文本处理 ======
-
-  // 保留链接、加粗、斜体（用在正文段落）
+  // ====== Rich text helpers ======
   function richTextToHtml(richText) {
     if (!richText?.length) return "";
-    return richText.map((t) => {
-      let text = escapeHtml(t.plain_text);
-      const ann = t.annotations || {};
-      if (ann.code)          text = `<code>${text}</code>`;
-      if (ann.bold)          text = `<strong>${text}</strong>`;
-      if (ann.italic)        text = `<em>${text}</em>`;
-      if (ann.strikethrough) text = `<del>${text}</del>`;
-      if (t.href)            text = `<a href="${escapeHtml(t.href)}" target="_blank" rel="noopener">${text}</a>`;
-      return text;
-    }).join("");
+    return richText
+      .map((t) => {
+        let text = escapeHtml(t.plain_text);
+        const ann = t.annotations || {};
+        if (ann.code) text = `<code>${text}</code>`;
+        if (ann.bold) text = `<strong>${text}</strong>`;
+        if (ann.italic) text = `<em>${text}</em>`;
+        if (ann.strikethrough) text = `<del>${text}</del>`;
+        if (t.href)
+          text = `<a href="${escapeHtml(
+            t.href,
+          )}" target="_blank" rel="noopener">${text}</a>`;
+        return text;
+      })
+      .join("");
   }
 
-  // 纯文本（用在代码块、图片 alt 等不需要 HTML 的地方）
   function richTextToPlain(richText) {
     return (richText || []).map((t) => t.plain_text).join("");
   }
 
-  // ====== Block → HTML 渲染器 ======
+  // ====== Block -> HTML renderer ======
   function renderBlocks(blocks) {
     let html = "";
     let listStack = [];
@@ -233,19 +264,39 @@ const NotionAPI = (() => {
         continue;
       }
 
-      // 关闭残留列表
       while (listStack.length) html += `</${listStack.pop()}>`;
 
       switch (block.type) {
-        case "heading_1":   html += `<h1>${block.text}</h1>`; break;
-        case "heading_2":   html += `<h2>${block.text}</h2>`; break;
-        case "heading_3":   html += `<h3>${block.text}</h3>`; break;
-        case "paragraph":   html += block.text ? `<p>${block.text}</p>` : ""; break;
-        case "code":        html += `<pre><code class="language-${block.language}">${escapeHtml(block.text)}</code></pre>`; break;
-        case "quote":       html += `<blockquote>${block.text}</blockquote>`; break;
-        case "divider":     html += "<hr>"; break;
-        case "image":       html += `<img src="${block.url}" alt="${escapeHtml(block.caption)}" loading="lazy">`; break;
-        default: break;
+        case "heading_1":
+          html += `<h1>${block.text}</h1>`;
+          break;
+        case "heading_2":
+          html += `<h2>${block.text}</h2>`;
+          break;
+        case "heading_3":
+          html += `<h3>${block.text}</h3>`;
+          break;
+        case "paragraph":
+          html += block.text ? `<p>${block.text}</p>` : "";
+          break;
+        case "code":
+          html += `<pre><code class="language-${block.language}">${escapeHtml(
+            block.text,
+          )}</code></pre>`;
+          break;
+        case "quote":
+          html += `<blockquote>${block.text}</blockquote>`;
+          break;
+        case "divider":
+          html += "<hr>";
+          break;
+        case "image":
+          html += `<img src="${block.url}" alt="${escapeHtml(
+            block.caption,
+          )}" loading="lazy">`;
+          break;
+        default:
+          break;
       }
     }
 
@@ -262,7 +313,7 @@ const NotionAPI = (() => {
       .replace(/"/g, "&quot;");
   }
 
-  // ====== 公开 API ======
+  // ====== Public API ======
   return {
     getCategories: () => CATEGORIES,
     queryPosts: (options = {}) => liveQueryDatabase(options),
