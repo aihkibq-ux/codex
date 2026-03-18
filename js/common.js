@@ -3,24 +3,26 @@
  */
 
 const canvas = document.getElementById("particles-canvas");
-const ctx = canvas ? canvas.getContext("2d", { alpha: true }) : null;
+const ctx = canvas ? canvas.getContext("2d") : null;
 const cursorGlow = document.getElementById("cursorGlow");
-const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+const reducedMotionQuery =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)")
+    : { matches: false };
 
-let width = window.innerWidth;
-let height = window.innerHeight;
-let particleCount = window.innerWidth < 768 ? 120 : 350;
+let width;
+let height;
 let particles = [];
-let drawPool = [];
 let rafId = null;
-let resizeTimer = null;
-let mouseAF = null;
 let mouseX = 0;
 let mouseY = 0;
 let targetMouseX = 0;
 let targetMouseY = 0;
-let targetSpeedMultiplier = 1;
+let particleCount = window.innerWidth < 768 ? 120 : 350;
 let speedMultiplier = 1;
+let targetSpeedMultiplier = 1;
+let mouseAF = null;
+let resizeTimer = null;
 let revealObserver = null;
 
 const colors = [
@@ -30,8 +32,6 @@ const colors = [
   "rgba(255, 64, 129, 0.8)",
   "rgba(255, 255, 255, 0.6)",
 ];
-const bucketArrays = Object.create(null);
-const bucketCounts = Object.create(null);
 
 function readStoredList(key) {
   try {
@@ -54,53 +54,17 @@ function writeStoredList(key, value) {
 window.SiteStore = {
   readList: readStoredList,
   writeList: writeStoredList,
-  updateList(key, updater) {
-    const next = updater(readStoredList(key).slice());
-    writeStoredList(key, next);
-    return next;
-  },
 };
 
-function syncParticleBuffers() {
-  drawPool = Array.from({ length: particleCount }, () => ({
-    px: 0,
-    py: 0,
-    pSize: 0,
-    opacity: 0,
-    color: "",
-  }));
-
-  colors.forEach((color) => {
-    bucketArrays[color] = Array(particleCount);
-    bucketCounts[color] = 0;
-  });
-}
-
-function resizeCanvas() {
+function resize() {
   width = window.innerWidth;
   height = window.innerHeight;
-
-  if (!ctx || !canvas) {
+  if (!canvas) {
     return;
   }
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  canvas.style.width = `${width}px`;
-  canvas.style.height = `${height}px`;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-
-function updateParticleCount() {
-  const nextCount = window.innerWidth < 768 ? 120 : 350;
-  if (nextCount === particleCount && drawPool.length) {
-    return false;
-  }
-
-  particleCount = nextCount;
-  syncParticleBuffers();
-  return true;
+  canvas.width = width;
+  canvas.height = height;
 }
 
 class Particle {
@@ -128,7 +92,6 @@ class Particle {
     this.x += this.vx;
     this.y += this.vy;
     this.z += this.vz * speedMultiplier;
-
     if (
       this.z < 1 ||
       this.x < -width ||
@@ -140,39 +103,46 @@ class Particle {
     }
   }
 
-  getDrawData(out) {
+  draw() {
+    if (!ctx) {
+      return;
+    }
+
     const fov = 300;
     const perspective = fov / (fov + this.z);
-    const parallaxX = mouseX * (1000 / this.z) * 0.2;
-    const parallaxY = mouseY * (1000 / this.z) * 0.2;
-    out.px = (this.x - width / 2) * perspective + width / 2 + parallaxX;
-    out.py = (this.y - height / 2) * perspective + height / 2 + parallaxY;
-    out.pSize = this.size * perspective * 2;
-    out.opacity = Math.min(1, Math.max(0, 1 - this.z / 1500));
-    out.color = this.color;
-    return out;
+    const px =
+      (this.x - width / 2) * perspective +
+      width / 2 +
+      mouseX * (1000 / this.z) * 0.2;
+    const py =
+      (this.y - height / 2) * perspective +
+      height / 2 +
+      mouseY * (1000 / this.z) * 0.2;
+    const pSize = this.size * perspective * 2;
+    const opacity = Math.min(1, Math.max(0, 1 - this.z / 1500));
+
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = opacity;
+    ctx.fillRect(px - pSize, py - pSize, pSize * 2, pSize * 2);
   }
 }
 
 function initParticles() {
-  particles = Array.from({ length: particleCount }, () => new Particle());
-}
-
-function shouldAnimateParticles() {
-  return Boolean(ctx) && !document.hidden && !reducedMotionQuery.matches;
+  particles = [];
+  for (let index = 0; index < particleCount; index += 1) {
+    particles.push(new Particle());
+  }
 }
 
 function stopParticles() {
-  if (!rafId) {
-    return;
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
   }
-
-  cancelAnimationFrame(rafId);
-  rafId = null;
 }
 
 function animateParticles() {
-  if (!ctx || !shouldAnimateParticles()) {
+  if (!ctx || document.hidden) {
     rafId = null;
     return;
   }
@@ -182,39 +152,9 @@ function animateParticles() {
   mouseY += (targetMouseY - mouseY) * 0.05;
   speedMultiplier += (targetSpeedMultiplier - speedMultiplier) * 0.08;
 
-  colors.forEach((color) => {
-    bucketCounts[color] = 0;
-  });
-
   for (let index = 0; index < particleCount; index += 1) {
-    const particle = particles[index];
-    particle.update();
-    const drawData = particle.getDrawData(drawPool[index]);
-    const color = drawData.color;
-    bucketArrays[color][bucketCounts[color]] = drawData;
-    bucketCounts[color] += 1;
-  }
-
-  for (let index = 0; index < colors.length; index += 1) {
-    const color = colors[index];
-    const count = bucketCounts[color];
-    if (!count) {
-      continue;
-    }
-
-    ctx.fillStyle = color;
-
-    for (let bucketIndex = 0; bucketIndex < count; bucketIndex += 1) {
-      const drawData = bucketArrays[color][bucketIndex];
-      const size = drawData.pSize * 2;
-      ctx.globalAlpha = drawData.opacity;
-      ctx.fillRect(
-        drawData.px - drawData.pSize,
-        drawData.py - drawData.pSize,
-        size,
-        size,
-      );
-    }
+    particles[index].update();
+    particles[index].draw();
   }
 
   ctx.globalAlpha = 1;
@@ -222,67 +162,93 @@ function animateParticles() {
 }
 
 function startParticles() {
-  if (!shouldAnimateParticles() || rafId) {
+  if (!ctx || rafId) {
     return;
-  }
-
-  if (!drawPool.length) {
-    syncParticleBuffers();
-  }
-  if (particles.length !== particleCount) {
-    initParticles();
   }
 
   animateParticles();
 }
 
-function handleResize() {
-  stopParticles();
+window.addEventListener(
+  "resize",
+  () => {
+    stopParticles();
+    if (resizeTimer) {
+      clearTimeout(resizeTimer);
+    }
 
-  if (resizeTimer) {
-    clearTimeout(resizeTimer);
-  }
+    resizeTimer = setTimeout(() => {
+      resize();
+      const nextCount = window.innerWidth < 768 ? 120 : 350;
+      if (nextCount !== particleCount) {
+        particleCount = nextCount;
+      }
+      initParticles();
+      startParticles();
+    }, 300);
+  },
+  { passive: true },
+);
 
-  resizeTimer = setTimeout(() => {
-    resizeCanvas();
-    updateParticleCount();
-    initParticles();
+window.addEventListener("mousedown", () => {
+  targetSpeedMultiplier = 20;
+});
+window.addEventListener("mouseup", () => {
+  targetSpeedMultiplier = 1;
+});
+window.addEventListener("mouseleave", () => {
+  targetSpeedMultiplier = 1;
+});
+window.addEventListener(
+  "touchstart",
+  () => {
+    targetSpeedMultiplier = 20;
+  },
+  { passive: true },
+);
+window.addEventListener(
+  "touchend",
+  () => {
+    targetSpeedMultiplier = 1;
+  },
+  { passive: true },
+);
+
+resize();
+initParticles();
+startParticles();
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopParticles();
+  } else if (ctx && !rafId) {
     startParticles();
-  }, 300);
-}
-
-function handleMotionPreferenceChange() {
-  if (shouldAnimateParticles()) {
-    startParticles();
-    return;
   }
+});
 
-  stopParticles();
-  if (ctx) {
-    ctx.clearRect(0, 0, width, height);
-  }
-}
+document.addEventListener(
+  "mousemove",
+  (event) => {
+    const clientX = event.clientX;
+    const clientY = event.clientY;
 
-function handlePointerMove(event) {
-  const clientX = event.clientX;
-  const clientY = event.clientY;
+    targetMouseX = (clientX - width / 2) * 2;
+    targetMouseY = (clientY - height / 2) * 2;
 
-  targetMouseX = (clientX - width / 2) * 2;
-  targetMouseY = (clientY - height / 2) * 2;
+    if (mouseAF) {
+      return;
+    }
 
-  if (!cursorGlow || mouseAF) {
-    return;
-  }
-
-  mouseAF = requestAnimationFrame(() => {
-    cursorGlow.style.transform = `translate(${clientX - 200}px, ${clientY - 200}px)`;
-    mouseAF = null;
-  });
-}
-
-function setWarpSpeed(value) {
-  targetSpeedMultiplier = value;
-}
+    mouseAF = requestAnimationFrame(() => {
+      if (cursorGlow) {
+        cursorGlow.style.transform =
+          "translate(" + (clientX - 200) + "px, " + (clientY - 200) + "px)";
+      }
+      mouseAF = null;
+    });
+  },
+  { passive: true },
+);
 
 function initBlogCardReveal() {
   const blogCards = document.querySelectorAll(".blog-card:not(.visible)");
@@ -291,7 +257,9 @@ function initBlogCardReveal() {
   }
 
   if (!("IntersectionObserver" in window)) {
-    blogCards.forEach((card) => card.classList.add("visible"));
+    blogCards.forEach((card) => {
+      card.classList.add("visible");
+    });
     return;
   }
 
@@ -299,12 +267,10 @@ function initBlogCardReveal() {
     revealObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            return;
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            revealObserver.unobserve(entry.target);
           }
-
-          entry.target.classList.add("visible");
-          revealObserver.unobserve(entry.target);
         });
       },
       { threshold: 0.1 },
@@ -312,87 +278,43 @@ function initBlogCardReveal() {
   }
 
   blogCards.forEach((card, index) => {
-    card.style.transitionDelay = `${index * 80}ms`;
+    card.style.transitionDelay = index * 80 + "ms";
     revealObserver.observe(card);
   });
 }
 
-function shouldHandleInternalLink(link, event) {
-  if (
-    !link.href ||
-    link.target === "_blank" ||
-    link.hasAttribute("download") ||
-    event.metaKey ||
-    event.ctrlKey ||
-    event.shiftKey ||
-    event.altKey ||
-    event.button !== 0
-  ) {
-    return false;
-  }
-
-  const url = new URL(link.href, window.location.href);
-  if (url.origin !== window.location.origin) {
-    return false;
-  }
-
-  if (
-    url.pathname === window.location.pathname &&
-    url.search === window.location.search &&
-    url.hash !== window.location.hash
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-function preloadBlogCard(link) {
-  if (!link || link.dataset.preloaded || !window.NotionAPI?.getPost) {
-    return;
-  }
-
-  const url = new URL(link.href, window.location.href);
-  const id = url.searchParams.get("id");
-  if (!id) {
-    return;
-  }
-
-  link.dataset.preloaded = "true";
-  window.NotionAPI.getPost(id).catch(() => {});
-}
-
 window.initBlogCardReveal = initBlogCardReveal;
 
-resizeCanvas();
-updateParticleCount();
-initParticles();
-startParticles();
-
-window.addEventListener("resize", handleResize, { passive: true });
-window.addEventListener("mousedown", () => setWarpSpeed(20), { passive: true });
-window.addEventListener("mouseup", () => setWarpSpeed(1), { passive: true });
-window.addEventListener("mouseleave", () => setWarpSpeed(1), { passive: true });
-window.addEventListener("touchstart", () => setWarpSpeed(20), { passive: true });
-window.addEventListener("touchend", () => setWarpSpeed(1), { passive: true });
-document.addEventListener("visibilitychange", handleMotionPreferenceChange);
-document.addEventListener("mousemove", handlePointerMove, { passive: true });
 document.addEventListener("mousedown", (event) => {
   if (!event.target.closest(".post-content")) {
-    window.getSelection()?.removeAllRanges();
+    const selection = window.getSelection ? window.getSelection() : null;
+    if (selection && typeof selection.removeAllRanges === "function") {
+      selection.removeAllRanges();
+    }
   }
 });
 
-if (typeof reducedMotionQuery.addEventListener === "function") {
-  reducedMotionQuery.addEventListener("change", handleMotionPreferenceChange);
-} else if (typeof reducedMotionQuery.addListener === "function") {
-  reducedMotionQuery.addListener(handleMotionPreferenceChange);
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   document.body.addEventListener("click", (event) => {
-    const link = event.target.closest("a[href]");
-    if (!link || !shouldHandleInternalLink(link, event)) {
+    const link = event.target.closest("a");
+    if (!link || !link.href) {
+      return;
+    }
+
+    if (link.target === "_blank") {
+      return;
+    }
+
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) {
+      return;
+    }
+
+    if (
+      url.pathname === window.location.pathname &&
+      url.search === window.location.search &&
+      url.hash !== window.location.hash
+    ) {
       return;
     }
 
@@ -404,23 +326,30 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.classList.add("page-fade-out");
     }
 
-    window.setTimeout(() => {
+    setTimeout(() => {
       window.location.href = link.href;
     }, 200);
   });
 
   document.body.addEventListener("mouseover", (event) => {
     const card = event.target.closest("a.blog-card");
-    if (card) {
-      preloadBlogCard(card);
+    if (
+      !card ||
+      card.dataset.preloaded ||
+      !window.NotionAPI ||
+      typeof NotionAPI.getPost !== "function"
+    ) {
+      return;
     }
-  });
 
-  document.body.addEventListener("focusin", (event) => {
-    const card = event.target.closest("a.blog-card");
-    if (card) {
-      preloadBlogCard(card);
+    const url = new URL(card.href, window.location.href);
+    const id = url.searchParams.get("id");
+    if (!id) {
+      return;
     }
+
+    card.dataset.preloaded = "true";
+    NotionAPI.getPost(id).catch(() => {});
   });
 });
 

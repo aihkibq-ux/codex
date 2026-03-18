@@ -121,6 +121,10 @@ const NotionAPI = (() => {
   }
 
   async function fetchJson(url, options = {}) {
+    if (typeof AbortController !== "function") {
+      return fetch(url, options);
+    }
+
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
       controller.abort();
