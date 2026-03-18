@@ -3,17 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>总览 - Share Everything</title>
-    <meta name="description" content="探索所有文章，按分类浏览并搜索感兴趣的内容。" />
+    <title>总览 — Share Everything</title>
+    <meta name="description" content="探索所有文章，按分类浏览，搜索你感兴趣的内容。" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&display=swap"
       rel="stylesheet"
+      media="print" onload="this.media='all'"
     />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&display=swap" /></noscript>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <!-- Top Actions -->
     <div class="top-actions" id="topActions">
       <a href="index.html" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -29,7 +32,7 @@
         </svg>
         <span>总览</span>
       </a>
-      <a href="blog.html?category=%E6%94%B6%E8%97%8F" class="action-btn">
+      <a href="blog.html?category=收藏" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
@@ -38,23 +41,28 @@
       </a>
     </div>
 
+    <!-- Cursor Glow -->
     <div class="cursor-glow" id="cursorGlow"></div>
 
+    <!-- Ambient Background -->
     <div class="ambient-background">
       <div class="glow-orb orb-1"></div>
       <div class="glow-orb orb-2"></div>
       <div class="glow-orb orb-3"></div>
-      <div class="glow-orb orb-4"></div>
-      <div class="glow-orb orb-5"></div>
     </div>
 
+    <!-- Particles -->
     <canvas id="particles-canvas"></canvas>
 
-    <div class="page-container">
-      <div class="page-header">
-        <h1 class="page-title" id="pageTitle">总览</h1>
-      </div>
+    <!-- Page Transition Wrapper -->
+    <div class="page-transition-wrapper" id="pageWrapper">
+      <!-- Content -->
+      <div class="page-container">
+        <div class="page-header">
+          <h1 class="page-title">总览</h1>
+        </div>
 
+      <!-- Search -->
       <div class="blog-search">
         <input type="text" id="blogSearch" placeholder="搜索文章标题、内容或标签..." />
         <svg
@@ -73,205 +81,69 @@
         </svg>
       </div>
 
+      <!-- Category Filters -->
       <div class="blog-filters" id="blogFilters"></div>
+
+      <!-- Blog Grid -->
       <div class="blog-grid" id="blogGrid"></div>
 
+      <!-- Empty State -->
       <div class="empty-state" id="emptyState" style="display: none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <p>没有找到匹配的文章</p>
-        <p style="font-size: 0.85rem;">请尝试其他关键词或分类</p>
+        <p style="font-size: 0.85rem;">试试其他关键词或分类</p>
       </div>
 
+      <!-- Pagination -->
       <div class="pagination" id="pagination"></div>
     </div>
+    </div> <!-- End Page Transition Wrapper -->
 
     <script src="js/common.js"></script>
     <script src="js/notion-api.js"></script>
     <script>
-      const categoryConst = NotionAPI.constants;
-      const DEFAULT_CATEGORY = categoryConst.ALL;
-      const DEFAULT_TITLE = "\u603B\u89C8";
-
-      let currentCategory = DEFAULT_CATEGORY;
+      /* ===== State ===== */
+      let currentCategory = "全部";
       let currentSearch = "";
       let currentPage = 1;
-      let renderToken = 0;
-      let searchDebounce = null;
 
+      /* ===== URL Params ===== */
       const params = new URLSearchParams(window.location.search);
       if (params.get("category")) currentCategory = params.get("category");
       if (params.get("search")) currentSearch = params.get("search");
-      if (params.get("page")) currentPage = parseInt(params.get("page"), 10) || 1;
+      if (params.get("page")) currentPage = parseInt(params.get("page")) || 1;
 
-      const pageTitleEl = document.getElementById("pageTitle");
-      const filtersEl = document.getElementById("blogFilters");
-      const searchInput = document.getElementById("blogSearch");
-      const gridEl = document.getElementById("blogGrid");
-      const emptyEl = document.getElementById("emptyState");
-      const paginationEl = document.getElementById("pagination");
-      const categories = NotionAPI.getCategories();
-
-      function setLoadingState(loading) {
-        gridEl.classList.toggle("is-loading", loading);
-      }
-
+      /* ===== Update UI ===== */
       function updatePageUI() {
-        if (pageTitleEl) {
-          pageTitleEl.textContent = currentCategory === DEFAULT_CATEGORY ? DEFAULT_TITLE : currentCategory;
+        const titleEl = document.querySelector(".page-title");
+        if (titleEl) {
+          titleEl.textContent = currentCategory === "全部" ? "总览" : currentCategory;
         }
 
         const topActions = document.querySelectorAll(".top-actions .action-btn");
-        topActions.forEach((btn) => btn.classList.remove("active"));
-        topActions.forEach((btn) => {
-          const href = btn.getAttribute("href") || "";
-          if (!href.startsWith("blog.html")) return;
-          const categoryInHref = new URL(btn.href, window.location.href).searchParams.get("category");
-          if (categoryInHref && categoryInHref === currentCategory) {
-            btn.classList.add("active");
-            return;
-          }
-          if (!categoryInHref && currentCategory !== categoryConst.FAVORITES) {
-            btn.classList.add("active");
+        topActions.forEach(btn => btn.classList.remove("active"));
+        
+        topActions.forEach(btn => {
+          const span = btn.querySelector("span");
+          if (span) {
+            const text = span.textContent.trim();
+            if (currentCategory === "收藏" && text === "收藏") {
+              btn.classList.add("active");
+            } else if (currentCategory !== "收藏" && text === "总览") {
+              btn.classList.add("active");
+            }
           }
         });
       }
 
-      function updateURL() {
-        const next = new URLSearchParams();
-        if (currentCategory !== DEFAULT_CATEGORY) next.set("category", currentCategory);
-        if (currentSearch) next.set("search", currentSearch);
-        if (currentPage > 1) next.set("page", String(currentPage));
-        const qs = next.toString();
-        history.replaceState(null, "", qs ? `?${qs}` : "blog.html");
-      }
+      updatePageUI();
 
-      function saveHistory() {
-        try {
-          const historyData = JSON.parse(localStorage.getItem("blog_history") || "[]");
-          const currentUrl = window.location.href;
-          if (historyData[0]?.url === currentUrl) return;
-          historyData.unshift({
-            url: currentUrl,
-            category: currentCategory,
-            search: currentSearch,
-            timestamp: Date.now(),
-          });
-          localStorage.setItem("blog_history", JSON.stringify(historyData.slice(0, 50)));
-        } catch {
-          // Ignore localStorage errors
-        }
-      }
-
-      function renderPagination(data) {
-        if (data.totalPages <= 1) {
-          paginationEl.innerHTML = "";
-          return;
-        }
-        let html = "";
-        for (let i = 1; i <= data.totalPages; i++) {
-          html += `<button class="page-btn${i === data.currentPage ? " active" : ""}" data-page="${i}">${i}</button>`;
-        }
-        paginationEl.innerHTML = html;
-        paginationEl.querySelectorAll(".page-btn").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            currentPage = parseInt(btn.dataset.page, 10);
-            updateURL();
-            renderPosts();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          });
-        });
-      }
-
-      function renderCard(post) {
-        const esc = NotionAPI.escapeHtml;
-        const safeUrl = NotionAPI.sanitizeUrl;
-        const style = NotionAPI.getCategoryStyle(post.category);
-
-        const postUrl = `post.html?id=${encodeURIComponent(post.id || "")}`;
-        const safeTitle = esc(post.title || "");
-        const safeExcerpt = esc(post.excerpt || "");
-        const safeCategory = esc(post.category || "");
-        const safeDate = esc(post.date || "");
-        const safeReadTime = esc(post.readTime || "");
-        const safeCoverUrl = safeUrl(post.coverImage || "");
-        const safeCoverEmoji = esc(post.coverEmoji || "\uD83D\uDCDD");
-        const safeGradient = esc(post.coverGradient || style.gradient);
-
-        const coverHtml = safeCoverUrl
-          ? `<div class="blog-card-cover-placeholder blog-card-cover-img">
-               <img src="${safeCoverUrl}" alt="${safeTitle}" loading="lazy" onerror="this.parentElement.classList.remove('blog-card-cover-img');this.remove()">
-             </div>`
-          : `<div class="blog-card-cover-placeholder" style="background: ${safeGradient}">
-               <span>${safeCoverEmoji}</span>
-             </div>`;
-
-        return `
-          <a href="${postUrl}" class="blog-card" data-reveal>
-            ${coverHtml}
-            <div class="blog-card-body">
-              <div class="blog-card-category" style="background: ${style.badgeInline}">${safeCategory}</div>
-              <h3 class="blog-card-title">${safeTitle}</h3>
-              <p class="blog-card-excerpt">${safeExcerpt}</p>
-              <div class="blog-card-meta">
-                <span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                  </svg>
-                  ${safeDate}
-                </span>
-                <span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
-                  ${safeReadTime}
-                </span>
-              </div>
-            </div>
-          </a>
-        `;
-      }
-
-      async function renderPosts() {
-        const requestId = ++renderToken;
-        setLoadingState(true);
-        try {
-          const data = await NotionAPI.queryPosts({
-            category: currentCategory,
-            search: currentSearch,
-            page: currentPage,
-          });
-
-          if (requestId !== renderToken) return;
-
-          if (!data.results.length) {
-            gridEl.innerHTML = "";
-            emptyEl.style.display = "flex";
-            paginationEl.innerHTML = "";
-            return;
-          }
-
-          emptyEl.style.display = "none";
-          gridEl.innerHTML = data.results.map(renderCard).join("");
-          renderPagination(data);
-          requestAnimationFrame(() => window.initBlogCardReveal());
-          saveHistory();
-        } catch (error) {
-          if (requestId !== renderToken) return;
-          console.error("Failed to load posts:", error);
-          gridEl.innerHTML = "";
-          emptyEl.style.display = "flex";
-          paginationEl.innerHTML = "";
-        } finally {
-          if (requestId === renderToken) setLoadingState(false);
-        }
-      }
+      /* ===== Render Filters ===== */
+      const filtersEl = document.getElementById("blogFilters");
+      const categories = NotionAPI.getCategories();
 
       categories.forEach((cat) => {
         const btn = document.createElement("button");
@@ -283,13 +155,18 @@
           updateURL();
           updatePageUI();
           renderPosts();
+          // Update active state
           filtersEl.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
         });
         filtersEl.appendChild(btn);
       });
 
+      /* ===== Search ===== */
+      const searchInput = document.getElementById("blogSearch");
       searchInput.value = currentSearch;
+
+      let searchDebounce = null;
       searchInput.addEventListener("input", () => {
         clearTimeout(searchDebounce);
         searchDebounce = setTimeout(() => {
@@ -297,18 +174,245 @@
           currentPage = 1;
           updateURL();
           renderPosts();
-        }, 250);
-      });
-      searchInput.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter") return;
-        clearTimeout(searchDebounce);
-        currentSearch = searchInput.value.trim();
-        currentPage = 1;
-        updateURL();
-        renderPosts();
+        }, 300);
       });
 
-      updatePageUI();
+      /* ===== Render Posts ===== */
+      const gridEl = document.getElementById("blogGrid");
+      const emptyEl = document.getElementById("emptyState");
+      const paginationEl = document.getElementById("pagination");
+
+      async function renderPosts() {
+        try {
+          let data;
+
+          // "收藏" 分类 → 显示本地收藏的文章
+          if (currentCategory === "收藏") {
+            let bookmarks = getBookmarks();
+            // 搜索过滤
+            if (currentSearch) {
+              const q = currentSearch.toLowerCase();
+              bookmarks = bookmarks.filter(p =>
+                p.title.toLowerCase().includes(q) ||
+                (p.excerpt || "").toLowerCase().includes(q)
+              );
+            }
+            const total = bookmarks.length;
+            const totalPages = Math.max(1, Math.ceil(total / 9));
+            const cp = Math.min(currentPage, totalPages);
+            const start = (cp - 1) * 9;
+            data = { results: bookmarks.slice(start, start + 9), total, totalPages, currentPage: cp };
+          } else {
+            data = await NotionAPI.queryPosts({
+              category: currentCategory,
+              search: currentSearch,
+              page: currentPage,
+            });
+          }
+
+          if (data.results.length === 0) {
+            gridEl.innerHTML = "";
+            emptyEl.style.display = "flex";
+            paginationEl.innerHTML = "";
+            return;
+          }
+
+          emptyEl.style.display = "none";
+          gridEl.innerHTML = data.results.map(renderCard).join("");
+          renderPagination(data);
+
+          // Trigger reveal animation
+          requestAnimationFrame(() => {
+            window.initBlogCardReveal();
+          });
+
+          // Save to reading history
+          saveHistory();
+        } catch (error) {
+          console.error("Failed to load posts:", error);
+          gridEl.innerHTML = "";
+          emptyEl.style.display = "flex";
+          paginationEl.innerHTML = "";
+        }
+      }
+
+      function renderCard(post) {
+        const esc = NotionAPI.escapeHtml;
+        const catColor = NotionAPI.getCategoryColor(post.category);
+        const bookmarked = isBookmarked(post.id);
+
+        const safeTitle = esc(post.title);
+        const safeExcerpt = esc(post.excerpt);
+        const safeCategory = esc(post.category);
+
+        const coverHtml = post.coverImage
+          ? `<div class="blog-card-cover-placeholder blog-card-cover-img">
+               <img src="${esc(post.coverImage)}" alt="${safeTitle}" loading="lazy" onerror="this.parentElement.classList.remove('blog-card-cover-img');this.remove()">
+             </div>`
+          : `<div class="blog-card-cover-placeholder" style="background: ${post.coverGradient || 'linear-gradient(135deg, #1a1a2e, #16213e)'}">
+               <span>${post.coverEmoji || '📝'}</span>
+             </div>`;
+        return `
+          <a href="post.html?id=${encodeURIComponent(post.id)}" class="blog-card" data-reveal data-post-id="${esc(post.id)}">
+            ${coverHtml}
+            <div class="blog-card-body">
+              <div class="blog-card-category" style="background: ${catColor.bg}; color: ${catColor.color}; border-color: ${catColor.border}">${safeCategory}</div>
+              <h3 class="blog-card-title">${safeTitle}</h3>
+              <p class="blog-card-excerpt">${safeExcerpt}</p>
+              <div class="blog-card-meta">
+                <span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  ${esc(post.date)}
+                </span>
+                <span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  ${esc(post.readTime)}
+                </span>
+                <button class="card-bookmark-btn${bookmarked ? ' bookmarked' : ''}" data-bookmark-id="${esc(post.id)}" title="${bookmarked ? '取消收藏' : '收藏'}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </a>
+        `;
+      }
+
+      /* ===== Pagination ===== */
+      function renderPagination(data) {
+        if (data.totalPages <= 1) {
+          paginationEl.innerHTML = "";
+          return;
+        }
+
+        let html = "";
+        for (let i = 1; i <= data.totalPages; i++) {
+          html += `<button class="page-btn${i === data.currentPage ? " active" : ""}" data-page="${i}">${i}</button>`;
+        }
+        paginationEl.innerHTML = html;
+
+        paginationEl.querySelectorAll(".page-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            currentPage = parseInt(btn.dataset.page);
+            updateURL();
+            renderPosts();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          });
+        });
+      }
+
+      /* ===== URL Management ===== */
+      function updateURL() {
+        const params = new URLSearchParams();
+        if (currentCategory !== "全部") params.set("category", currentCategory);
+        if (currentSearch) params.set("search", currentSearch);
+        if (currentPage > 1) params.set("page", currentPage);
+        const qs = params.toString();
+        history.replaceState(null, "", qs ? `?${qs}` : "blog.html");
+      }
+
+      /* ===== Reading History (localStorage) ===== */
+      function saveHistory() {
+        try {
+          const entries = JSON.parse(localStorage.getItem("blog_history") || "[]");
+          const entry = {
+            url: window.location.href,
+            category: currentCategory,
+            search: currentSearch,
+            timestamp: Date.now(),
+          };
+          entries.unshift(entry);
+          // Keep last 50
+          localStorage.setItem("blog_history", JSON.stringify(entries.slice(0, 50)));
+        } catch (e) {
+          // localStorage not available
+        }
+      }
+
+      /* ===== Bookmark (收藏) ===== */
+      const BOOKMARK_KEY = "bookmarked_posts";
+
+      function getBookmarks() {
+        try {
+          return JSON.parse(localStorage.getItem(BOOKMARK_KEY) || "[]");
+        } catch (e) { return []; }
+      }
+
+      function isBookmarked(id) {
+        return getBookmarks().some(b => b.id === id);
+      }
+
+      function toggleBookmarkById(postId) {
+        let bookmarks = getBookmarks();
+        const exists = bookmarks.some(b => b.id === postId);
+        if (exists) {
+          bookmarks = bookmarks.filter(b => b.id !== postId);
+        } else {
+          // 从当前渲染的数据中找到 post 信息
+          const card = document.querySelector(`[data-post-id="${postId}"]`);
+          if (card) {
+            const title = card.querySelector('.blog-card-title')?.textContent || '';
+            const excerpt = card.querySelector('.blog-card-excerpt')?.textContent || '';
+            const category = card.querySelector('.blog-card-category')?.textContent || '';
+            const metaSpans = card.querySelectorAll('.blog-card-meta > span');
+            const date = metaSpans[0]?.textContent?.trim() || '';
+            const readTime = metaSpans[1]?.textContent?.trim() || '';
+            const img = card.querySelector('.blog-card-cover-img img');
+            const emoji = card.querySelector('.blog-card-cover-placeholder:not(.blog-card-cover-img) span');
+            bookmarks.unshift({
+              id: postId,
+              title,
+              excerpt,
+              category,
+              date,
+              readTime,
+              coverImage: img?.src || null,
+              coverEmoji: emoji?.textContent || '📝',
+              coverGradient: null,
+              timestamp: Date.now(),
+            });
+          }
+        }
+        try {
+          localStorage.setItem(BOOKMARK_KEY, JSON.stringify(bookmarks));
+        } catch (e) {}
+        return !exists;
+      }
+
+      // 事件委托：处理卡片上的收藏按钮点击
+      gridEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.card-bookmark-btn');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const postId = btn.dataset.bookmarkId;
+        const nowBookmarked = toggleBookmarkById(postId);
+
+        btn.classList.toggle('bookmarked', nowBookmarked);
+        btn.title = nowBookmarked ? '取消收藏' : '收藏';
+
+        // 弹跳动画
+        btn.classList.remove('bounce');
+        void btn.offsetWidth;
+        btn.classList.add('bounce');
+
+        // 如果在「收藏」分类下取消收藏，重新渲染列表
+        if (!nowBookmarked && currentCategory === '收藏') {
+          setTimeout(() => renderPosts(), 300);
+        }
+      });
+
+      /* ===== Init ===== */
       renderPosts();
     </script>
   </body>

@@ -24,11 +24,6 @@
   box-sizing: border-box;
 }
 
-.glass {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
 body {
   font-family:
     "Inter",
@@ -42,8 +37,29 @@ body {
   overflow-y: auto;
   position: relative;
   -webkit-font-smoothing: antialiased;
-  user-select: text;
-  -webkit-user-select: text;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.page-transition-wrapper {
+  animation: pageFadeIn 0.5s var(--transition-smooth) forwards;
+  min-height: 100vh;
+  position: relative;
+  z-index: 10;
+}
+
+.page-transition-wrapper.page-fade-out {
+  animation: pageFadeOut 0.2s var(--transition-smooth) forwards;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pageFadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-15px); }
 }
 
 /* ===== Ambient Background ===== */
@@ -87,7 +103,7 @@ body {
 .glow-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(180px);
+  filter: blur(100px);
   opacity: 1;
   animation: orb-drift 20s infinite alternate ease-in-out;
   transform: translateZ(0);
@@ -118,24 +134,6 @@ body {
   left: 20vw;
   animation-duration: 18s;
   animation-delay: -10s;
-}
-.orb-4 {
-  width: 40vw;
-  height: 40vw;
-  background: rgba(255, 64, 129, 0.2);
-  bottom: 20vh;
-  left: -5vw;
-  animation-duration: 22s;
-  animation-delay: -8s;
-}
-.orb-5 {
-  width: 35vw;
-  height: 35vw;
-  background: rgba(0, 255, 180, 0.15);
-  top: 50vh;
-  right: 5vw;
-  animation-duration: 30s;
-  animation-delay: -15s;
 }
 
 @keyframes orb-drift {
@@ -168,8 +166,8 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  width: 600px;
-  height: 600px;
+  width: 400px;
+  height: 400px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
@@ -229,13 +227,11 @@ body {
   background: var(--glass-bg);
   color: var(--text-secondary);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.3s var(--transition-smooth);
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 .action-btn:hover,
@@ -270,8 +266,6 @@ body {
   gap: 32px;
   pointer-events: none;
 }
-
-
 
 .hero-title {
   font-family:
@@ -308,8 +302,6 @@ body {
   }
 }
 
-
-
 .hero-cta-group {
   display: flex;
   gap: 16px;
@@ -335,8 +327,6 @@ body {
   text-decoration: none;
   transition: all 0.4s var(--transition-smooth);
   position: relative;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 .btn-tooltip {
@@ -377,8 +367,8 @@ body {
   );
   color: rgba(200, 245, 255, 0.95);
   border: 1px solid rgba(120, 230, 255, 0.25);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow:
     0 0 20px rgba(120, 230, 255, 0.12),
     0 8px 32px rgba(0, 0, 0, 0.2),
@@ -403,17 +393,6 @@ body {
   transform: translateY(0) scale(0.98);
 }
 
-.btn-ghost {
-  background: var(--glass-bg);
-  color: var(--text-primary);
-  border: 1px solid var(--glass-border);
-}
-.btn-ghost:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-hover);
-  transform: translateY(-2px);
-}
-
 .btn-home {
   background: linear-gradient(
     135deg,
@@ -422,8 +401,8 @@ body {
   );
   color: rgba(230, 200, 255, 0.95);
   border: 1px solid rgba(200, 130, 255, 0.25);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow:
     0 0 20px rgba(200, 130, 255, 0.12),
     0 8px 32px rgba(0, 0, 0, 0.2),
@@ -456,8 +435,8 @@ body {
   );
   color: rgba(200, 255, 220, 0.95);
   border: 1px solid rgba(130, 230, 170, 0.25);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow:
     0 0 20px rgba(130, 230, 170, 0.12),
     0 8px 32px rgba(0, 0, 0, 0.2),
@@ -498,8 +477,8 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: 100px;
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--text-primary);
   font-family: inherit;
   font-size: 0.9rem;
@@ -611,12 +590,6 @@ body {
   margin-bottom: 16px;
 }
 
-.page-subtitle {
-  color: var(--text-secondary);
-  font-size: 1.05rem;
-  line-height: 1.7;
-}
-
 /* ===== Blog Filters ===== */
 .blog-filters {
   display: flex;
@@ -638,8 +611,6 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s var(--transition-smooth);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .filter-btn:hover,
@@ -664,8 +635,8 @@ body {
   border: 1px solid var(--glass-border);
   border-radius: 100px;
   background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--text-primary);
   font-family: inherit;
   font-size: 0.9rem;
@@ -701,12 +672,6 @@ body {
   gap: 28px;
   width: 100%;
   max-width: 1200px;
-  transition: opacity 0.2s ease;
-}
-
-.blog-grid.is-loading {
-  opacity: 0.55;
-  pointer-events: none;
 }
 
 .blog-card {
@@ -714,8 +679,8 @@ body {
   border-radius: var(--radius-md);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   overflow: hidden;
   cursor: pointer;
   transition: all 0.5s var(--transition-smooth);
@@ -738,14 +703,6 @@ body {
   border-color: var(--glass-border-hover);
   transform: translateY(-6px);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
-}
-
-.blog-card-cover {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  display: block;
-  border-bottom: 1px solid var(--glass-border);
 }
 
 .blog-card-cover-placeholder {
@@ -826,6 +783,54 @@ body {
   height: 14px;
   margin-right: 4px;
   vertical-align: -2px;
+}
+
+/* Card Bookmark Button */
+.card-bookmark-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.3s var(--transition-smooth);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.card-bookmark-btn svg {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  transition: all 0.3s var(--transition-smooth);
+}
+
+.card-bookmark-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  transform: scale(1.15);
+}
+
+.card-bookmark-btn.bookmarked {
+  color: #ffab00;
+}
+
+.card-bookmark-btn.bookmarked svg {
+  fill: #ffab00;
+  stroke: #ffab00;
+}
+
+.card-bookmark-btn.bookmarked:hover {
+  background: rgba(255, 171, 0, 0.1);
+}
+
+.card-bookmark-btn.bounce svg {
+  animation: fabBounce 0.5s var(--transition-smooth);
 }
 
 /* ===== Pagination ===== */
@@ -953,12 +958,6 @@ body {
   vertical-align: -2px;
 }
 
-.post-cover {
-  width: 100%;
-  border-radius: var(--radius-md);
-  margin-bottom: 48px;
-  border: 1px solid var(--glass-border);
-}
 
 /* ===== Post Content (Notion Blocks) ===== */
 .post-content {
@@ -1143,18 +1142,110 @@ body {
   to { opacity: 0; transform: translateY(-15px); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+/* ===== Floating Bookmark Button ===== */
+.fab-bookmark {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 100px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--text-secondary);
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: all 0.4s var(--transition-smooth);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  animation: fabSlideIn 0.5s var(--transition-smooth) 0.8s both;
+}
 
-  .cursor-glow,
-  .glow-orb {
-    display: none;
+@keyframes fabSlideIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fab-bookmark:hover {
+  width: 108px;
+  gap: 6px;
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.fab-bookmark-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transition: all 0.3s var(--transition-smooth);
+}
+
+.fab-bookmark-label {
+  white-space: nowrap;
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  transition: all 0.4s var(--transition-smooth);
+}
+
+.fab-bookmark:hover .fab-bookmark-label {
+  opacity: 1;
+  width: auto;
+}
+
+/* Bookmarked state */
+.fab-bookmark.bookmarked {
+  border-color: rgba(255, 171, 0, 0.3);
+  background: rgba(255, 171, 0, 0.1);
+  color: #ffab00;
+}
+
+.fab-bookmark.bookmarked .fab-bookmark-icon {
+  fill: #ffab00;
+  stroke: #ffab00;
+}
+
+.fab-bookmark.bookmarked:hover {
+  border-color: rgba(255, 171, 0, 0.4);
+  background: rgba(255, 171, 0, 0.15);
+  box-shadow: 0 8px 32px rgba(255, 171, 0, 0.15);
+}
+
+/* Bounce animation on toggle */
+@keyframes fabBounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.25); }
+  50% { transform: scale(0.9); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.fab-bookmark.bounce .fab-bookmark-icon {
+  animation: fabBounce 0.5s var(--transition-smooth);
+}
+
+@media (max-width: 768px) {
+  .fab-bookmark {
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    padding: 0 12px;
+  }
+  .fab-bookmark:hover {
+    width: 100px;
   }
 }
