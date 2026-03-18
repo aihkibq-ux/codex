@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>总览 — Share Everything</title>
-    <meta name="description" content="探索所有文章，按分类浏览，搜索你感兴趣的内容。" />
+    <title>总览 - Share Everything</title>
+    <meta name="description" content="探索所有文章，按分类浏览并搜索感兴趣的内容。" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <!-- Top Actions -->
     <div class="top-actions" id="topActions">
       <a href="index.html" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -30,7 +29,7 @@
         </svg>
         <span>总览</span>
       </a>
-      <a href="blog.html?category=收藏" class="action-btn">
+      <a href="blog.html?category=%E6%94%B6%E8%97%8F" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
@@ -39,10 +38,8 @@
       </a>
     </div>
 
-    <!-- Cursor Glow -->
     <div class="cursor-glow" id="cursorGlow"></div>
 
-    <!-- Ambient Background -->
     <div class="ambient-background">
       <div class="glow-orb orb-1"></div>
       <div class="glow-orb orb-2"></div>
@@ -51,16 +48,13 @@
       <div class="glow-orb orb-5"></div>
     </div>
 
-    <!-- Particles -->
     <canvas id="particles-canvas"></canvas>
 
-    <!-- Content -->
     <div class="page-container">
       <div class="page-header">
-        <h1 class="page-title">总览</h1>
+        <h1 class="page-title" id="pageTitle">总览</h1>
       </div>
 
-      <!-- Search -->
       <div class="blog-search">
         <input type="text" id="blogSearch" placeholder="搜索文章标题、内容或标签..." />
         <svg
@@ -79,68 +73,205 @@
         </svg>
       </div>
 
-      <!-- Category Filters -->
       <div class="blog-filters" id="blogFilters"></div>
-
-      <!-- Blog Grid -->
       <div class="blog-grid" id="blogGrid"></div>
 
-      <!-- Empty State -->
       <div class="empty-state" id="emptyState" style="display: none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <p>没有找到匹配的文章</p>
-        <p style="font-size: 0.85rem;">试试其他关键词或分类</p>
+        <p style="font-size: 0.85rem;">请尝试其他关键词或分类</p>
       </div>
 
-      <!-- Pagination -->
       <div class="pagination" id="pagination"></div>
     </div>
 
     <script src="js/common.js"></script>
     <script src="js/notion-api.js"></script>
     <script>
-      /* ===== State ===== */
-      let currentCategory = "全部";
+      const categoryConst = NotionAPI.constants;
+      const DEFAULT_CATEGORY = categoryConst.ALL;
+      const DEFAULT_TITLE = "\u603B\u89C8";
+
+      let currentCategory = DEFAULT_CATEGORY;
       let currentSearch = "";
       let currentPage = 1;
+      let renderToken = 0;
+      let searchDebounce = null;
 
-      /* ===== URL Params ===== */
       const params = new URLSearchParams(window.location.search);
       if (params.get("category")) currentCategory = params.get("category");
       if (params.get("search")) currentSearch = params.get("search");
-      if (params.get("page")) currentPage = parseInt(params.get("page")) || 1;
+      if (params.get("page")) currentPage = parseInt(params.get("page"), 10) || 1;
 
-      /* ===== Update UI ===== */
+      const pageTitleEl = document.getElementById("pageTitle");
+      const filtersEl = document.getElementById("blogFilters");
+      const searchInput = document.getElementById("blogSearch");
+      const gridEl = document.getElementById("blogGrid");
+      const emptyEl = document.getElementById("emptyState");
+      const paginationEl = document.getElementById("pagination");
+      const categories = NotionAPI.getCategories();
+
+      function setLoadingState(loading) {
+        gridEl.classList.toggle("is-loading", loading);
+      }
+
       function updatePageUI() {
-        const titleEl = document.querySelector(".page-title");
-        if (titleEl) {
-          titleEl.textContent = currentCategory === "全部" ? "总览" : currentCategory;
+        if (pageTitleEl) {
+          pageTitleEl.textContent = currentCategory === DEFAULT_CATEGORY ? DEFAULT_TITLE : currentCategory;
         }
 
         const topActions = document.querySelectorAll(".top-actions .action-btn");
-        topActions.forEach(btn => btn.classList.remove("active"));
-        
-        topActions.forEach(btn => {
-          const span = btn.querySelector("span");
-          if (span) {
-            const text = span.textContent.trim();
-            if (currentCategory === "收藏" && text === "收藏") {
-              btn.classList.add("active");
-            } else if (currentCategory !== "收藏" && text === "总览") {
-              btn.classList.add("active");
-            }
+        topActions.forEach((btn) => btn.classList.remove("active"));
+        topActions.forEach((btn) => {
+          const href = btn.getAttribute("href") || "";
+          if (!href.startsWith("blog.html")) return;
+          const categoryInHref = new URL(btn.href, window.location.href).searchParams.get("category");
+          if (categoryInHref && categoryInHref === currentCategory) {
+            btn.classList.add("active");
+            return;
+          }
+          if (!categoryInHref && currentCategory !== categoryConst.FAVORITES) {
+            btn.classList.add("active");
           }
         });
       }
 
-      updatePageUI();
+      function updateURL() {
+        const next = new URLSearchParams();
+        if (currentCategory !== DEFAULT_CATEGORY) next.set("category", currentCategory);
+        if (currentSearch) next.set("search", currentSearch);
+        if (currentPage > 1) next.set("page", String(currentPage));
+        const qs = next.toString();
+        history.replaceState(null, "", qs ? `?${qs}` : "blog.html");
+      }
 
-      /* ===== Render Filters ===== */
-      const filtersEl = document.getElementById("blogFilters");
-      const categories = NotionAPI.getCategories();
+      function saveHistory() {
+        try {
+          const historyData = JSON.parse(localStorage.getItem("blog_history") || "[]");
+          const currentUrl = window.location.href;
+          if (historyData[0]?.url === currentUrl) return;
+          historyData.unshift({
+            url: currentUrl,
+            category: currentCategory,
+            search: currentSearch,
+            timestamp: Date.now(),
+          });
+          localStorage.setItem("blog_history", JSON.stringify(historyData.slice(0, 50)));
+        } catch {
+          // Ignore localStorage errors
+        }
+      }
+
+      function renderPagination(data) {
+        if (data.totalPages <= 1) {
+          paginationEl.innerHTML = "";
+          return;
+        }
+        let html = "";
+        for (let i = 1; i <= data.totalPages; i++) {
+          html += `<button class="page-btn${i === data.currentPage ? " active" : ""}" data-page="${i}">${i}</button>`;
+        }
+        paginationEl.innerHTML = html;
+        paginationEl.querySelectorAll(".page-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            currentPage = parseInt(btn.dataset.page, 10);
+            updateURL();
+            renderPosts();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          });
+        });
+      }
+
+      function renderCard(post) {
+        const esc = NotionAPI.escapeHtml;
+        const safeUrl = NotionAPI.sanitizeUrl;
+        const style = NotionAPI.getCategoryStyle(post.category);
+
+        const postUrl = `post.html?id=${encodeURIComponent(post.id || "")}`;
+        const safeTitle = esc(post.title || "");
+        const safeExcerpt = esc(post.excerpt || "");
+        const safeCategory = esc(post.category || "");
+        const safeDate = esc(post.date || "");
+        const safeReadTime = esc(post.readTime || "");
+        const safeCoverUrl = safeUrl(post.coverImage || "");
+        const safeCoverEmoji = esc(post.coverEmoji || "\uD83D\uDCDD");
+        const safeGradient = esc(post.coverGradient || style.gradient);
+
+        const coverHtml = safeCoverUrl
+          ? `<div class="blog-card-cover-placeholder blog-card-cover-img">
+               <img src="${safeCoverUrl}" alt="${safeTitle}" loading="lazy" onerror="this.parentElement.classList.remove('blog-card-cover-img');this.remove()">
+             </div>`
+          : `<div class="blog-card-cover-placeholder" style="background: ${safeGradient}">
+               <span>${safeCoverEmoji}</span>
+             </div>`;
+
+        return `
+          <a href="${postUrl}" class="blog-card" data-reveal>
+            ${coverHtml}
+            <div class="blog-card-body">
+              <div class="blog-card-category" style="background: ${style.badgeInline}">${safeCategory}</div>
+              <h3 class="blog-card-title">${safeTitle}</h3>
+              <p class="blog-card-excerpt">${safeExcerpt}</p>
+              <div class="blog-card-meta">
+                <span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  ${safeDate}
+                </span>
+                <span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  ${safeReadTime}
+                </span>
+              </div>
+            </div>
+          </a>
+        `;
+      }
+
+      async function renderPosts() {
+        const requestId = ++renderToken;
+        setLoadingState(true);
+        try {
+          const data = await NotionAPI.queryPosts({
+            category: currentCategory,
+            search: currentSearch,
+            page: currentPage,
+          });
+
+          if (requestId !== renderToken) return;
+
+          if (!data.results.length) {
+            gridEl.innerHTML = "";
+            emptyEl.style.display = "flex";
+            paginationEl.innerHTML = "";
+            return;
+          }
+
+          emptyEl.style.display = "none";
+          gridEl.innerHTML = data.results.map(renderCard).join("");
+          renderPagination(data);
+          requestAnimationFrame(() => window.initBlogCardReveal());
+          saveHistory();
+        } catch (error) {
+          if (requestId !== renderToken) return;
+          console.error("Failed to load posts:", error);
+          gridEl.innerHTML = "";
+          emptyEl.style.display = "flex";
+          paginationEl.innerHTML = "";
+        } finally {
+          if (requestId === renderToken) setLoadingState(false);
+        }
+      }
 
       categories.forEach((cat) => {
         const btn = document.createElement("button");
@@ -152,18 +283,13 @@
           updateURL();
           updatePageUI();
           renderPosts();
-          // Update active state
           filtersEl.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
         });
         filtersEl.appendChild(btn);
       });
 
-      /* ===== Search ===== */
-      const searchInput = document.getElementById("blogSearch");
       searchInput.value = currentSearch;
-
-      let searchDebounce = null;
       searchInput.addEventListener("input", () => {
         clearTimeout(searchDebounce);
         searchDebounce = setTimeout(() => {
@@ -171,148 +297,18 @@
           currentPage = 1;
           updateURL();
           renderPosts();
-        }, 300);
+        }, 250);
+      });
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        clearTimeout(searchDebounce);
+        currentSearch = searchInput.value.trim();
+        currentPage = 1;
+        updateURL();
+        renderPosts();
       });
 
-      /* ===== Render Posts ===== */
-      const gridEl = document.getElementById("blogGrid");
-      const emptyEl = document.getElementById("emptyState");
-      const paginationEl = document.getElementById("pagination");
-
-      async function renderPosts() {
-        try {
-          const data = await NotionAPI.queryPosts({
-            category: currentCategory,
-            search: currentSearch,
-            page: currentPage,
-          });
-
-          if (data.results.length === 0) {
-            gridEl.innerHTML = "";
-            emptyEl.style.display = "flex";
-            paginationEl.innerHTML = "";
-            return;
-          }
-
-          emptyEl.style.display = "none";
-          gridEl.innerHTML = data.results.map(renderCard).join("");
-          renderPagination(data);
-
-          // Trigger reveal animation
-          requestAnimationFrame(() => {
-            window.initBlogCardReveal();
-          });
-
-          // Save to reading history
-          saveHistory();
-        } catch (error) {
-          console.error("Failed to load posts:", error);
-          gridEl.innerHTML = "";
-          emptyEl.style.display = "flex";
-          paginationEl.innerHTML = "";
-        }
-      }
-
-      function renderCard(post) {
-        const categoryColors = {
-          "技术": "rgba(41, 121, 255, 0.1); color: #2979ff; border-color: rgba(41, 121, 255, 0.2)",
-          "精选": "rgba(255, 64, 129, 0.1); color: #ff4081; border-color: rgba(255, 64, 129, 0.2)",
-          "随想": "rgba(213, 0, 249, 0.1); color: #d500f9; border-color: rgba(213, 0, 249, 0.2)",
-          "教程": "rgba(0, 230, 118, 0.1); color: #00e676; border-color: rgba(0, 230, 118, 0.2)",
-          "工具": "rgba(255, 171, 0, 0.1); color: #ffab00; border-color: rgba(255, 171, 0, 0.2)",
-        };
-
-        const catStyle = categoryColors[post.category] || "rgba(0, 229, 255, 0.1); color: #00e5ff; border-color: rgba(0, 229, 255, 0.2)";
-
-        const coverHtml = post.coverImage
-          ? `<div class="blog-card-cover-placeholder blog-card-cover-img">
-               <img src="${post.coverImage}" alt="${post.title}" loading="lazy" onerror="this.parentElement.classList.remove('blog-card-cover-img');this.remove()">
-             </div>`
-          : `<div class="blog-card-cover-placeholder" style="background: ${post.coverGradient || 'linear-gradient(135deg, #1a1a2e, #16213e)'}">
-               <span>${post.coverEmoji || '📝'}</span>
-             </div>`;
-        return `
-          <a href="post.html?id=${post.id}" class="blog-card" data-reveal>
-            ${coverHtml}
-            <div class="blog-card-body">
-              <div class="blog-card-category" style="background: ${catStyle}">${post.category}</div>
-              <h3 class="blog-card-title">${post.title}</h3>
-              <p class="blog-card-excerpt">${post.excerpt}</p>
-              <div class="blog-card-meta">
-                <span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                  </svg>
-                  ${post.date}
-                </span>
-                <span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
-                  ${post.readTime}
-                </span>
-              </div>
-            </div>
-          </a>
-        `;
-      }
-
-      /* ===== Pagination ===== */
-      function renderPagination(data) {
-        if (data.totalPages <= 1) {
-          paginationEl.innerHTML = "";
-          return;
-        }
-
-        let html = "";
-        for (let i = 1; i <= data.totalPages; i++) {
-          html += `<button class="page-btn${i === data.currentPage ? " active" : ""}" data-page="${i}">${i}</button>`;
-        }
-        paginationEl.innerHTML = html;
-
-        paginationEl.querySelectorAll(".page-btn").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            currentPage = parseInt(btn.dataset.page);
-            updateURL();
-            renderPosts();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          });
-        });
-      }
-
-      /* ===== URL Management ===== */
-      function updateURL() {
-        const params = new URLSearchParams();
-        if (currentCategory !== "全部") params.set("category", currentCategory);
-        if (currentSearch) params.set("search", currentSearch);
-        if (currentPage > 1) params.set("page", currentPage);
-        const qs = params.toString();
-        history.replaceState(null, "", qs ? `?${qs}` : "blog.html");
-      }
-
-      /* ===== Reading History (localStorage) ===== */
-      function saveHistory() {
-        try {
-          const history = JSON.parse(localStorage.getItem("blog_history") || "[]");
-          const entry = {
-            url: window.location.href,
-            category: currentCategory,
-            search: currentSearch,
-            timestamp: Date.now(),
-          };
-          history.unshift(entry);
-          // Keep last 50
-          localStorage.setItem("blog_history", JSON.stringify(history.slice(0, 50)));
-        } catch (e) {
-          // localStorage not available
-        }
-      }
-
-      /* ===== Init ===== */
+      updatePageUI();
       renderPosts();
     </script>
   </body>

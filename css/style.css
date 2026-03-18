@@ -42,8 +42,8 @@ body {
   overflow-y: auto;
   position: relative;
   -webkit-font-smoothing: antialiased;
-  user-select: none;
-  -webkit-user-select: none;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* ===== Ambient Background ===== */
@@ -234,6 +234,8 @@ body {
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.3s var(--transition-smooth);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .action-btn:hover,
@@ -333,6 +335,8 @@ body {
   text-decoration: none;
   transition: all 0.4s var(--transition-smooth);
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .btn-tooltip {
@@ -697,6 +701,12 @@ body {
   gap: 28px;
   width: 100%;
   max-width: 1200px;
+  transition: opacity 0.2s ease;
+}
+
+.blog-grid.is-loading {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .blog-card {
@@ -1101,6 +1111,7 @@ body {
     background-position: 200% 0;
   }
   100% {
+    background-position: -200% 0;
   }
 }
 
@@ -1130,4 +1141,20 @@ body {
 @keyframes fade-out {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-15px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .cursor-glow,
+  .glow-orb {
+    display: none;
+  }
 }

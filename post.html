@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>文章 — Share Everything</title>
+    <title>文章 - Share Everything</title>
     <meta name="description" content="阅读文章详情" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <!-- Top Actions -->
     <div class="top-actions" id="topActions">
       <a href="index.html" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -30,7 +29,7 @@
         </svg>
         <span>总览</span>
       </a>
-      <a href="blog.html?category=收藏" class="action-btn">
+      <a href="blog.html?category=%E6%94%B6%E8%97%8F" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
@@ -39,10 +38,8 @@
       </a>
     </div>
 
-    <!-- Cursor Glow -->
     <div class="cursor-glow" id="cursorGlow"></div>
 
-    <!-- Ambient Background -->
     <div class="ambient-background">
       <div class="glow-orb orb-1"></div>
       <div class="glow-orb orb-2"></div>
@@ -51,14 +48,11 @@
       <div class="glow-orb orb-5"></div>
     </div>
 
-    <!-- Particles -->
     <canvas id="particles-canvas"></canvas>
 
-    <!-- Content -->
     <div class="post-container">
       <article class="post-article" id="postArticle">
-        <!-- Back -->
-        <button class="post-back" id="postBack" onclick="history.back()">
+        <button class="post-back" id="postBack" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
@@ -66,7 +60,6 @@
           返回列表
         </button>
 
-        <!-- Loading Skeleton -->
         <div id="postSkeleton">
           <div class="skeleton" style="width: 80px; height: 24px; margin-bottom: 20px;"></div>
           <div class="skeleton" style="width: 100%; height: 48px; margin-bottom: 12px;"></div>
@@ -78,12 +71,10 @@
           <div class="skeleton" style="width: 75%; height: 20px; margin-bottom: 12px;"></div>
         </div>
 
-        <!-- Post Content (rendered by JS) -->
         <div id="postContent" style="display: none;"></div>
       </article>
     </div>
 
-    <!-- Empty State -->
     <div class="empty-state" id="postEmpty" style="display: none;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -98,7 +89,6 @@
     <script src="js/common.js"></script>
     <script src="js/notion-api.js"></script>
     <script>
-      /* ===== Load Post ===== */
       const params = new URLSearchParams(window.location.search);
       const postId = params.get("id");
 
@@ -106,94 +96,28 @@
       const contentEl = document.getElementById("postContent");
       const emptyEl = document.getElementById("postEmpty");
       const articleEl = document.getElementById("postArticle");
+      const backBtn = document.getElementById("postBack");
 
-      async function loadPost() {
-        if (!postId) {
-          showEmpty();
+      function goBack() {
+        if (window.history.length > 1) {
+          window.history.back();
           return;
         }
-
-        const post = await NotionAPI.getPost(postId);
-
-        if (!post) {
-          showEmpty();
-          return;
-        }
-
-        // Update page title
-        document.title = `${post.title} — Share Everything`;
-        document.querySelector('meta[name="description"]').content = post.excerpt || post.title;
-
-        // Category colors
-        const categoryColors = {
-          "技术": { bg: "rgba(41, 121, 255, 0.1)", color: "#2979ff", border: "rgba(41, 121, 255, 0.2)" },
-          "精选": { bg: "rgba(255, 64, 129, 0.1)", color: "#ff4081", border: "rgba(255, 64, 129, 0.2)" },
-          "随想": { bg: "rgba(213, 0, 249, 0.1)", color: "#d500f9", border: "rgba(213, 0, 249, 0.2)" },
-          "教程": { bg: "rgba(0, 230, 118, 0.1)", color: "#00e676", border: "rgba(0, 230, 118, 0.2)" },
-          "工具": { bg: "rgba(255, 171, 0, 0.1)", color: "#ffab00", border: "rgba(255, 171, 0, 0.2)" },
-        };
-
-        const catColor = categoryColors[post.category] || {
-          bg: "rgba(0, 229, 255, 0.1)",
-          color: "#00e5ff",
-          border: "rgba(0, 229, 255, 0.2)",
-        };
-
-        // Render post
-        const renderedContent = NotionAPI.renderBlocks(post.content || []);
-
-        contentEl.innerHTML = `
-          <div class="post-header">
-            <div class="post-category" style="background: ${catColor.bg}; color: ${catColor.color}; border: 1px solid ${catColor.border};">
-              ${post.category}
-            </div>
-            <h1 class="post-title">${post.title}</h1>
-            <div class="post-meta">
-              <span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                ${post.date}
-              </span>
-              <span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                ${post.readTime}
-              </span>
-              ${post.tags ? `<span>${post.tags.map(t => `#${t}`).join(" ")}</span>` : ""}
-            </div>
-          </div>
-          <div class="post-content">
-            ${renderedContent}
-          </div>
-        `;
-
-        // Show content, hide skeleton
-        skeletonEl.style.display = "none";
-        contentEl.style.display = "block";
-        contentEl.style.animation = "fadeInUp 0.6s ease both";
-
-        // Save reading history
-        saveReadingHistory(post);
+        window.location.href = "blog.html";
       }
+
+      backBtn.addEventListener("click", goBack);
 
       function showEmpty() {
         skeletonEl.style.display = "none";
-        articleEl.querySelector(".post-back").style.display = "none";
+        backBtn.style.display = "none";
         emptyEl.style.display = "flex";
       }
 
-      /* ===== Reading History ===== */
       function saveReadingHistory(post) {
         try {
-          const history = JSON.parse(localStorage.getItem("reading_history") || "[]");
-          // Remove duplicate
-          const filtered = history.filter((h) => h.id !== post.id);
+          const historyData = JSON.parse(localStorage.getItem("reading_history") || "[]");
+          const filtered = historyData.filter((item) => item.id !== post.id);
           filtered.unshift({
             id: post.id,
             title: post.title,
@@ -201,12 +125,73 @@
             timestamp: Date.now(),
           });
           localStorage.setItem("reading_history", JSON.stringify(filtered.slice(0, 100)));
-        } catch (e) {
-          // localStorage not available
+        } catch {
+          // Ignore localStorage errors
         }
       }
 
-      /* ===== Init ===== */
+      async function loadPost() {
+        try {
+          if (!postId) {
+            showEmpty();
+            return;
+          }
+
+          const post = await NotionAPI.getPost(postId);
+          if (!post) {
+            showEmpty();
+            return;
+          }
+
+          document.title = `${post.title} - Share Everything`;
+          document.querySelector('meta[name="description"]').content = post.excerpt || post.title;
+
+          const esc = NotionAPI.escapeHtml;
+          const style = NotionAPI.getCategoryStyle(post.category);
+          const renderedContent = NotionAPI.renderBlocks(post.content || []);
+          const safeTags = (post.tags || []).map((tag) => `#${esc(tag)}`).join(" ");
+
+          contentEl.innerHTML = `
+            <div class="post-header">
+              <div class="post-category" style="background: ${style.bg}; color: ${style.color}; border: 1px solid ${style.border};">
+                ${esc(post.category || "")}
+              </div>
+              <h1 class="post-title">${esc(post.title || "")}</h1>
+              <div class="post-meta">
+                <span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  ${esc(post.date || "")}
+                </span>
+                <span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  ${esc(post.readTime || "")}
+                </span>
+                ${safeTags ? `<span>${safeTags}</span>` : ""}
+              </div>
+            </div>
+            <div class="post-content">
+              ${renderedContent}
+            </div>
+          `;
+
+          skeletonEl.style.display = "none";
+          contentEl.style.display = "block";
+          contentEl.style.animation = "fadeInUp 0.6s ease both";
+          saveReadingHistory(post);
+        } catch (error) {
+          console.error("Failed to load post:", error);
+          showEmpty();
+        }
+      }
+
       loadPost();
     </script>
   </body>
