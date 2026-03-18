@@ -156,7 +156,7 @@ body {
   width: 100vw;
   height: 100vh;
   z-index: 1;
-  pointer-events: auto;
+  pointer-events: none;
   opacity: 0.8;
   will-change: transform;
 }
@@ -688,6 +688,7 @@ body {
   color: inherit;
   opacity: 0;
   transform: translateY(30px);
+  contain: layout paint;
 }
 
 .blog-card.visible {
@@ -966,6 +967,8 @@ body {
   color: var(--text-primary);
   user-select: text;
   -webkit-user-select: text;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 1000px;
 }
 
 .post-content h1,
@@ -1247,5 +1250,27 @@ body {
   }
   .fab-bookmark:hover {
     width: 100px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .glow-orb,
+  .hero-title,
+  .page-transition-wrapper,
+  .top-actions,
+  .fab-bookmark,
+  .blog-card,
+  .blog-card.visible {
+    animation: none !important;
+    transform: none !important;
   }
 }

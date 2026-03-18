@@ -1,20 +1,28 @@
 /**
- * common.js — 共享交互逻辑
- * 粒子星空、光标跟随、卡片聚光灯、滚动揭示
+ * common.js - shared interaction logic
  */
 
-/* ===== Particles (Star-field Warp) ===== */
 const canvas = document.getElementById("particles-canvas");
-const ctx = canvas ? canvas.getContext("2d") : null;
-let width, height;
-let particles = [];
-let rafId = null;
-let mouseX = 0,
-  mouseY = 0;
-let targetMouseX = 0,
-  targetMouseY = 0;
+const ctx = canvas ? canvas.getContext("2d", { alpha: true }) : null;
+const cursorGlow = document.getElementById("cursorGlow");
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+let width = window.innerWidth;
+let height = window.innerHeight;
 let particleCount = window.innerWidth < 768 ? 120 : 350;
+let particles = [];
+let drawPool = [];
+let rafId = null;
+let resizeTimer = null;
+let mouseAF = null;
+let mouseX = 0;
+let mouseY = 0;
+let targetMouseX = 0;
+let targetMouseY = 0;
+let targetSpeedMultiplier = 1;
+let speedMultiplier = 1;
+let revealObserver = null;
+
 const colors = [
   "rgba(0, 255, 255, 1)",
   "rgba(77, 159, 255, 0.9)",
@@ -22,14 +30,77 @@ const colors = [
   "rgba(255, 64, 129, 0.8)",
   "rgba(255, 255, 255, 0.6)",
 ];
+const bucketArrays = Object.create(null);
+const bucketCounts = Object.create(null);
 
-function resize() {
+function readStoredList(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function writeStoredList(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+window.SiteStore = {
+  readList: readStoredList,
+  writeList: writeStoredList,
+  updateList(key, updater) {
+    const next = updater(readStoredList(key).slice());
+    writeStoredList(key, next);
+    return next;
+  },
+};
+
+function syncParticleBuffers() {
+  drawPool = Array.from({ length: particleCount }, () => ({
+    px: 0,
+    py: 0,
+    pSize: 0,
+    opacity: 0,
+    color: "",
+  }));
+
+  colors.forEach((color) => {
+    bucketArrays[color] = Array(particleCount);
+    bucketCounts[color] = 0;
+  });
+}
+
+function resizeCanvas() {
   width = window.innerWidth;
   height = window.innerHeight;
-  if (canvas) {
-    canvas.width = width;
-    canvas.height = height;
+
+  if (!ctx || !canvas) {
+    return;
   }
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function updateParticleCount() {
+  const nextCount = window.innerWidth < 768 ? 120 : 350;
+  if (nextCount === particleCount && drawPool.length) {
+    return false;
+  }
+
+  particleCount = nextCount;
+  syncParticleBuffers();
+  return true;
 }
 
 class Particle {
@@ -57,6 +128,7 @@ class Particle {
     this.x += this.vx;
     this.y += this.vy;
     this.z += this.vz * speedMultiplier;
+
     if (
       this.z < 1 ||
       this.x < -width ||
@@ -83,218 +155,280 @@ class Particle {
 }
 
 function initParticles() {
-  particles = [];
-  for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+  particles = Array.from({ length: particleCount }, () => new Particle());
 }
 
-// Reusable draw-data objects to reduce GC pressure
-let drawPool = Array.from({ length: particleCount }, () => ({
-  px: 0,
-  py: 0,
-  pSize: 0,
-  opacity: 0,
-  color: "",
-}));
+function shouldAnimateParticles() {
+  return Boolean(ctx) && !document.hidden && !reducedMotionQuery.matches;
+}
 
-const bucketKeys = colors;
-let bucketArrays = {};
-let bucketCounts = {};
-bucketKeys.forEach((c) => {
-  bucketArrays[c] = Array(particleCount);
-  bucketCounts[c] = 0;
-});
+function stopParticles() {
+  if (!rafId) {
+    return;
+  }
 
-let speedMultiplier = 1;
-let targetSpeedMultiplier = 1;
+  cancelAnimationFrame(rafId);
+  rafId = null;
+}
 
 function animateParticles() {
-  if (!ctx) return;
+  if (!ctx || !shouldAnimateParticles()) {
+    rafId = null;
+    return;
+  }
+
   ctx.clearRect(0, 0, width, height);
   mouseX += (targetMouseX - mouseX) * 0.05;
   mouseY += (targetMouseY - mouseY) * 0.05;
   speedMultiplier += (targetSpeedMultiplier - speedMultiplier) * 0.08;
 
-  // Reset counters for this frame
-  bucketKeys.forEach((c) => (bucketCounts[c] = 0));
+  colors.forEach((color) => {
+    bucketCounts[color] = 0;
+  });
 
-  for (let i = 0; i < particleCount; i++) {
-    particles[i].update();
-    const d = particles[i].getDrawData(drawPool[i]);
-    const c = d.color;
-    bucketArrays[c][bucketCounts[c]++] = d;
+  for (let index = 0; index < particleCount; index += 1) {
+    const particle = particles[index];
+    particle.update();
+    const drawData = particle.getDrawData(drawPool[index]);
+    const color = drawData.color;
+    bucketArrays[color][bucketCounts[color]] = drawData;
+    bucketCounts[color] += 1;
   }
 
-  for (let i = 0; i < bucketKeys.length; i++) {
-    const color = bucketKeys[i];
+  for (let index = 0; index < colors.length; index += 1) {
+    const color = colors[index];
     const count = bucketCounts[color];
-    if (count === 0) continue;
+    if (!count) {
+      continue;
+    }
 
     ctx.fillStyle = color;
 
-    for (let j = 0; j < count; j++) {
-      const d = bucketArrays[color][j];
-      ctx.globalAlpha = d.opacity;
-      const s = d.pSize * 2;
-      ctx.fillRect(d.px - d.pSize, d.py - d.pSize, s, s);
+    for (let bucketIndex = 0; bucketIndex < count; bucketIndex += 1) {
+      const drawData = bucketArrays[color][bucketIndex];
+      const size = drawData.pSize * 2;
+      ctx.globalAlpha = drawData.opacity;
+      ctx.fillRect(
+        drawData.px - drawData.pSize,
+        drawData.py - drawData.pSize,
+        size,
+        size,
+      );
     }
   }
+
   ctx.globalAlpha = 1;
   rafId = requestAnimationFrame(animateParticles);
 }
 
-let resizeTimer = null;
-window.addEventListener("resize", () => {
-  if (rafId) {
-    cancelAnimationFrame(rafId);
-    rafId = null;
+function startParticles() {
+  if (!shouldAnimateParticles() || rafId) {
+    return;
   }
-  if (resizeTimer) clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    resize();
-    
-    // Update particle count on resize in case of orientation change
-    const newCount = window.innerWidth < 768 ? 120 : 350;
-    if (newCount !== particleCount) {
-      particleCount = newCount;
-      drawPool = Array.from({ length: particleCount }, () => ({
-        px: 0, py: 0, pSize: 0, opacity: 0, color: "",
-      }));
-      bucketKeys.forEach((c) => {
-        bucketArrays[c] = Array(particleCount);
-      });
-    }
 
+  if (!drawPool.length) {
+    syncParticleBuffers();
+  }
+  if (particles.length !== particleCount) {
     initParticles();
-    animateParticles();
-  }, 300);
-});
-
-// Smooth hyper-drive burst
-window.addEventListener("mousedown", () => (targetSpeedMultiplier = 20));
-window.addEventListener("mouseup", () => (targetSpeedMultiplier = 1));
-window.addEventListener("mouseleave", () => (targetSpeedMultiplier = 1));
-window.addEventListener("touchstart", () => (targetSpeedMultiplier = 20));
-window.addEventListener("touchend", () => (targetSpeedMultiplier = 1));
-
-resize();
-initParticles();
-animateParticles();
-
-// 页面不可见时暂停粒子动画，节省 CPU/GPU
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    if (rafId) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-  } else if (!rafId && ctx) {
-    animateParticles();
   }
-});
 
-/* ===== Cursor Glow, Spotlight & Parallax (merged mousemove) ===== */
-const cursorGlow = document.getElementById("cursorGlow");
-let mouseAF = null;
+  animateParticles();
+}
 
-document.addEventListener("mousemove", (e) => {
-  const clientX = e.clientX;
-  const clientY = e.clientY;
+function handleResize() {
+  stopParticles();
 
-  // Particles Parallax Offset
+  if (resizeTimer) {
+    clearTimeout(resizeTimer);
+  }
+
+  resizeTimer = setTimeout(() => {
+    resizeCanvas();
+    updateParticleCount();
+    initParticles();
+    startParticles();
+  }, 300);
+}
+
+function handleMotionPreferenceChange() {
+  if (shouldAnimateParticles()) {
+    startParticles();
+    return;
+  }
+
+  stopParticles();
+  if (ctx) {
+    ctx.clearRect(0, 0, width, height);
+  }
+}
+
+function handlePointerMove(event) {
+  const clientX = event.clientX;
+  const clientY = event.clientY;
+
   targetMouseX = (clientX - width / 2) * 2;
   targetMouseY = (clientY - height / 2) * 2;
 
-  if (mouseAF) return; // Debounce RAF
+  if (!cursorGlow || mouseAF) {
+    return;
+  }
+
   mouseAF = requestAnimationFrame(() => {
-    // Global Cursor Glow
-    if (cursorGlow) {
-      cursorGlow.style.transform = `translate(${clientX - 200}px, ${clientY - 200}px)`;
-    }
+    cursorGlow.style.transform = `translate(${clientX - 200}px, ${clientY - 200}px)`;
     mouseAF = null;
   });
-});
-
-/* ===== Blog Card Reveal (reuse for blog pages) ===== */
-function initBlogCardReveal() {
-  const blogCards = document.querySelectorAll(".blog-card");
-  if (blogCards.length === 0) return;
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const card = entry.target;
-          const siblings = [...card.parentElement.children];
-          const i = siblings.indexOf(card);
-          setTimeout(() => card.classList.add("visible"), i * 80);
-          observer.unobserve(card);
-        }
-      });
-    },
-    { threshold: 0.1 },
-  );
-  blogCards.forEach((el) => observer.observe(el));
 }
 
-// Expose for use in page scripts
+function setWarpSpeed(value) {
+  targetSpeedMultiplier = value;
+}
+
+function initBlogCardReveal() {
+  const blogCards = document.querySelectorAll(".blog-card:not(.visible)");
+  if (!blogCards.length) {
+    return;
+  }
+
+  if (!("IntersectionObserver" in window)) {
+    blogCards.forEach((card) => card.classList.add("visible"));
+    return;
+  }
+
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+
+          entry.target.classList.add("visible");
+          revealObserver.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.1 },
+    );
+  }
+
+  blogCards.forEach((card, index) => {
+    card.style.transitionDelay = `${index * 80}ms`;
+    revealObserver.observe(card);
+  });
+}
+
+function shouldHandleInternalLink(link, event) {
+  if (
+    !link.href ||
+    link.target === "_blank" ||
+    link.hasAttribute("download") ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey ||
+    event.button !== 0
+  ) {
+    return false;
+  }
+
+  const url = new URL(link.href, window.location.href);
+  if (url.origin !== window.location.origin) {
+    return false;
+  }
+
+  if (
+    url.pathname === window.location.pathname &&
+    url.search === window.location.search &&
+    url.hash !== window.location.hash
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function preloadBlogCard(link) {
+  if (!link || link.dataset.preloaded || !window.NotionAPI?.getPost) {
+    return;
+  }
+
+  const url = new URL(link.href, window.location.href);
+  const id = url.searchParams.get("id");
+  if (!id) {
+    return;
+  }
+
+  link.dataset.preloaded = "true";
+  window.NotionAPI.getPost(id).catch(() => {});
+}
+
 window.initBlogCardReveal = initBlogCardReveal;
 
-/* ===== 清除文字选区（防止蓝框残留）===== */
-document.addEventListener("mousedown", (e) => {
-  if (!e.target.closest(".post-content")) {
+resizeCanvas();
+updateParticleCount();
+initParticles();
+startParticles();
+
+window.addEventListener("resize", handleResize, { passive: true });
+window.addEventListener("mousedown", () => setWarpSpeed(20), { passive: true });
+window.addEventListener("mouseup", () => setWarpSpeed(1), { passive: true });
+window.addEventListener("mouseleave", () => setWarpSpeed(1), { passive: true });
+window.addEventListener("touchstart", () => setWarpSpeed(20), { passive: true });
+window.addEventListener("touchend", () => setWarpSpeed(1), { passive: true });
+document.addEventListener("visibilitychange", handleMotionPreferenceChange);
+document.addEventListener("mousemove", handlePointerMove, { passive: true });
+document.addEventListener("mousedown", (event) => {
+  if (!event.target.closest(".post-content")) {
     window.getSelection()?.removeAllRanges();
   }
 });
 
-/* ===== 路由跳转平滑动画 & 预加载 ===== */
+if (typeof reducedMotionQuery.addEventListener === "function") {
+  reducedMotionQuery.addEventListener("change", handleMotionPreferenceChange);
+} else if (typeof reducedMotionQuery.addListener === "function") {
+  reducedMotionQuery.addListener(handleMotionPreferenceChange);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. 拦截站内链接，添加淡出动画
-  document.body.addEventListener("click", (e) => {
-    const link = e.target.closest("a");
-    if (!link || !link.href) return;
-    
-    // 只拦截当前域名的内部链接，且不是新标签页
-    if (link.target !== "_blank" && link.href.startsWith(window.location.origin)) {
-      // 忽略仅 hash 的变化 (锚点)
-      const url = new URL(link.href);
-      if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash !== window.location.hash) {
-        return; 
-      }
-      
-      e.preventDefault();
-      const wrapper = document.getElementById("pageWrapper");
-      if (wrapper) {
-        wrapper.classList.add("page-fade-out");
-      } else {
-        document.body.classList.add("page-fade-out"); // fallback
-      }
-      setTimeout(() => {
-        window.location.href = link.href;
-      }, 200); // 与 CSS 动画时长匹配
+  document.body.addEventListener("click", (event) => {
+    const link = event.target.closest("a[href]");
+    if (!link || !shouldHandleInternalLink(link, event)) {
+      return;
+    }
+
+    event.preventDefault();
+    const wrapper = document.getElementById("pageWrapper");
+    if (wrapper) {
+      wrapper.classList.add("page-fade-out");
+    } else {
+      document.body.classList.add("page-fade-out");
+    }
+
+    window.setTimeout(() => {
+      window.location.href = link.href;
+    }, 200);
+  });
+
+  document.body.addEventListener("mouseover", (event) => {
+    const card = event.target.closest("a.blog-card");
+    if (card) {
+      preloadBlogCard(card);
     }
   });
 
-  // 2. 鼠标悬停文章卡片时自动预加载数据
-  document.body.addEventListener("mouseover", (e) => {
-    const card = e.target.closest("a.blog-card");
-    if (card && card.href) {
-      if (!card.dataset.preloaded) {
-        card.dataset.preloaded = "true";
-        const url = new URL(card.href);
-        const id = url.searchParams.get("id");
-        if (id && window.NotionAPI && NotionAPI.getPost) {
-          // 静默预压入 sessionStorage 缓存中
-          NotionAPI.getPost(id).catch(() => {});
-        }
-      }
+  document.body.addEventListener("focusin", (event) => {
+    const card = event.target.closest("a.blog-card");
+    if (card) {
+      preloadBlogCard(card);
     }
   });
 });
 
-// 3. 处理浏览器的后退/前进缓存 (BFCache)
-window.addEventListener("pageshow", (e) => {
-  // 如果页面是从缓存中加载的 (或者有些浏览器总是触发)，确保移除淡出类
+window.addEventListener("pageshow", () => {
   const wrapper = document.getElementById("pageWrapper");
-  if (wrapper) wrapper.classList.remove("page-fade-out");
-  document.body.classList.remove("page-fade-out"); // fallback
+  if (wrapper) {
+    wrapper.classList.remove("page-fade-out");
+  }
+  document.body.classList.remove("page-fade-out");
+  startParticles();
 });

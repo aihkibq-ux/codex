@@ -4,39 +4,48 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Share Everything</title>
-    <meta name="description" content="Share Everything — 探索、记录、分享" />
+    <meta
+      name="description"
+      content="Share Everything - &#x63A2;&#x7D22;&#x3001;&#x8BB0;&#x5F55;&#x3001;&#x5206;&#x4EAB;"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&display=swap"
       rel="stylesheet"
-      media="print" onload="this.media='all'"
+      media="print"
+      onload="this.media='all'"
     />
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&display=swap" /></noscript>
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&display=swap"
+      />
+    </noscript>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-
-    <!-- Cursor Glow -->
     <div class="cursor-glow" id="cursorGlow"></div>
 
-    <!-- Ambient Background -->
     <div class="ambient-background">
       <div class="glow-orb orb-1"></div>
       <div class="glow-orb orb-2"></div>
       <div class="glow-orb orb-3"></div>
     </div>
 
-    <!-- Particles -->
     <canvas id="particles-canvas"></canvas>
 
-    <!-- Content -->
     <div class="content-layer">
-      <!-- Hero -->
       <section class="hero-section" id="hero">
         <h1 class="hero-title">Share Everything</h1>
+
         <div class="hero-search">
-          <input type="text" id="heroSearch" />
+          <input
+            type="text"
+            id="heroSearch"
+            placeholder="&#x641C;&#x7D22;&#x6587;&#x7AE0;&#x6216;&#x4E3B;&#x9898;"
+            aria-label="&#x641C;&#x7D22;&#x6587;&#x7AE0;"
+          />
           <svg
             class="search-icon"
             width="18"
@@ -52,8 +61,9 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </div>
+
         <div class="hero-cta-group">
-          <button class="btn btn-home" id="ctaHome">
+          <button class="btn btn-home" id="ctaHome" type="button">
             <svg
               width="18"
               height="18"
@@ -67,9 +77,9 @@
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            <span class="btn-tooltip">总览</span>
+            <span class="btn-tooltip">&#x603B;&#x89C8;</span>
           </button>
-          <button class="btn btn-primary" id="ctaStart">
+          <button class="btn btn-primary" id="ctaStart" type="button">
             <svg
               width="18"
               height="18"
@@ -82,9 +92,9 @@
             >
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
-            <span class="btn-tooltip">精选</span>
+            <span class="btn-tooltip">&#x7CBE;&#x9009;</span>
           </button>
-          <button class="btn btn-wiki" id="ctaWiki">
+          <button class="btn btn-wiki" id="ctaWiki" type="button">
             <svg
               width="18"
               height="18"
@@ -96,45 +106,48 @@
               stroke-linejoin="round"
             >
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-              <path
-                d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-              />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
             </svg>
-            <span class="btn-tooltip">收藏</span>
+            <span class="btn-tooltip">&#x6536;&#x85CF;</span>
           </button>
         </div>
       </section>
-
-
     </div>
 
     <script src="js/common.js"></script>
     <script>
-      /* ===== Search → Blog ===== */
       const searchInput = document.getElementById("heroSearch");
       const searchIcon = document.querySelector(".search-icon");
+      const homeButton = document.getElementById("ctaHome");
+      const startButton = document.getElementById("ctaStart");
+      const favoritesButton = document.getElementById("ctaWiki");
+
+      function navigateToBlog(query = "") {
+        window.location.href = query ? `blog.html?${query}` : "blog.html";
+      }
 
       function executeSearch() {
         const query = searchInput.value.trim();
-        if (query) {
-          window.location.href = `blog.html?search=${encodeURIComponent(query)}`;
+        if (!query) {
+          return;
         }
+
+        navigateToBlog(`search=${encodeURIComponent(query)}`);
       }
 
-      searchInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") executeSearch();
+      searchInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          executeSearch();
+        }
       });
-      searchIcon.addEventListener("click", executeSearch);
 
-      /* ===== Button Routes ===== */
-      document.getElementById("ctaHome").addEventListener("click", () => {
-        window.location.href = "blog.html";
+      searchIcon.addEventListener("click", executeSearch);
+      homeButton.addEventListener("click", () => navigateToBlog());
+      startButton.addEventListener("click", () => {
+        navigateToBlog(`category=${encodeURIComponent("\u7cbe\u9009")}`);
       });
-      document.getElementById("ctaStart").addEventListener("click", () => {
-        window.location.href = "blog.html?category=精选";
-      });
-      document.getElementById("ctaWiki").addEventListener("click", () => {
-        window.location.href = "blog.html?category=收藏";
+      favoritesButton.addEventListener("click", () => {
+        navigateToBlog(`category=${encodeURIComponent("\u6536\u85cf")}`);
       });
     </script>
   </body>

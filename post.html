@@ -3,148 +3,214 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>文章 — Share Everything</title>
-    <meta name="description" content="阅读文章详情" />
+    <title>&#x6587;&#x7AE0; - Share Everything</title>
+    <meta name="description" content="&#x9605;&#x8BFB;&#x6587;&#x7AE0;&#x8BE6;&#x60C5;" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
-      media="print" onload="this.media='all'"
+      media="print"
+      onload="this.media='all'"
     />
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      />
+    </noscript>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <!-- Top Actions -->
     <div class="top-actions" id="topActions">
       <a href="index.html" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
-        <span>首页</span>
+        <span>&#x9996;&#x9875;</span>
       </a>
       <a href="blog.html" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
         </svg>
-        <span>总览</span>
+        <span>&#x603B;&#x89C8;</span>
       </a>
-      <a href="blog.html?category=收藏" class="action-btn">
+      <a href="blog.html?category=%E6%94%B6%E8%97%8F" class="action-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
-        <span>收藏</span>
+        <span>&#x6536;&#x85CF;</span>
       </a>
     </div>
 
-    <!-- Cursor Glow -->
     <div class="cursor-glow" id="cursorGlow"></div>
 
-    <!-- Ambient Background -->
     <div class="ambient-background">
       <div class="glow-orb orb-1"></div>
       <div class="glow-orb orb-2"></div>
       <div class="glow-orb orb-3"></div>
     </div>
 
-    <!-- Particles -->
     <canvas id="particles-canvas"></canvas>
 
-    <!-- Page Transition Wrapper -->
     <div class="page-transition-wrapper" id="pageWrapper">
-    <!-- Content -->
-    <div class="post-container">
-      <article class="post-article" id="postArticle">
-        <!-- Back -->
-        <button class="post-back" id="postBack" onclick="history.back()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
+      <div class="post-container">
+        <article class="post-article" id="postArticle">
+          <button class="post-back" id="postBack" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            &#x8FD4;&#x56DE;&#x5217;&#x8868;
+          </button>
+
+          <div id="postSkeleton">
+            <div class="skeleton" style="width: 80px; height: 24px; margin-bottom: 20px;"></div>
+            <div class="skeleton" style="width: 100%; height: 48px; margin-bottom: 12px;"></div>
+            <div class="skeleton" style="width: 60%; height: 48px; margin-bottom: 24px;"></div>
+            <div class="skeleton" style="width: 200px; height: 20px; margin-bottom: 48px;"></div>
+            <div class="skeleton" style="width: 100%; height: 300px; margin-bottom: 32px;"></div>
+            <div class="skeleton" style="width: 100%; height: 20px; margin-bottom: 12px;"></div>
+            <div class="skeleton" style="width: 90%; height: 20px; margin-bottom: 12px;"></div>
+            <div class="skeleton" style="width: 75%; height: 20px; margin-bottom: 12px;"></div>
+          </div>
+
+          <div id="postContent" style="display: none;"></div>
+        </article>
+
+        <button class="fab-bookmark" id="fabBookmark" style="display: none;" aria-label="&#x6536;&#x85CF;&#x6587;&#x7AE0;" type="button">
+          <svg class="fab-bookmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
           </svg>
-          返回列表
+          <span class="fab-bookmark-label">&#x6536;&#x85CF;</span>
         </button>
 
-        <!-- Loading Skeleton -->
-        <div id="postSkeleton">
-          <div class="skeleton" style="width: 80px; height: 24px; margin-bottom: 20px;"></div>
-          <div class="skeleton" style="width: 100%; height: 48px; margin-bottom: 12px;"></div>
-          <div class="skeleton" style="width: 60%; height: 48px; margin-bottom: 24px;"></div>
-          <div class="skeleton" style="width: 200px; height: 20px; margin-bottom: 48px;"></div>
-          <div class="skeleton" style="width: 100%; height: 300px; margin-bottom: 32px;"></div>
-          <div class="skeleton" style="width: 100%; height: 20px; margin-bottom: 12px;"></div>
-          <div class="skeleton" style="width: 90%; height: 20px; margin-bottom: 12px;"></div>
-          <div class="skeleton" style="width: 75%; height: 20px; margin-bottom: 12px;"></div>
+        <div class="empty-state" id="postEmpty" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <p>&#x6587;&#x7AE0;&#x4E0D;&#x5B58;&#x5728;</p>
+          <p style="font-size: 0.85rem;">
+            <a href="blog.html" style="color: var(--accent-cyan); text-decoration: none;">&#x8FD4;&#x56DE;&#x535A;&#x5BA2;&#x5217;&#x8868;</a>
+          </p>
         </div>
-
-        <!-- Post Content (rendered by JS) -->
-        <div id="postContent" style="display: none;"></div>
-      </article>
-
-    <!-- Floating Bookmark Button -->
-    <button class="fab-bookmark" id="fabBookmark" style="display: none;" aria-label="收藏文章">
-      <svg class="fab-bookmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-      </svg>
-      <span class="fab-bookmark-label">收藏</span>
-    </button>
-
-    <!-- Empty State -->
-    <div class="empty-state" id="postEmpty" style="display: none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-      </svg>
-      <p>文章不存在</p>
-      <p style="font-size: 0.85rem;">
-        <a href="blog.html" style="color: var(--accent-cyan); text-decoration: none;">返回博客列表</a>
-      </p>
+      </div>
     </div>
-    </div> <!-- End Page Transition Wrapper -->
 
     <script src="js/common.js"></script>
     <script src="js/notion-api.js"></script>
     <script>
-      /* ===== Load Post ===== */
+      const BOOKMARK_KEY = "bookmarked_posts";
+      const READING_HISTORY_KEY = "reading_history";
       const params = new URLSearchParams(window.location.search);
       const postId = params.get("id");
 
+      const articleEl = document.getElementById("postArticle");
+      const backButtonEl = document.getElementById("postBack");
       const skeletonEl = document.getElementById("postSkeleton");
       const contentEl = document.getElementById("postContent");
       const emptyEl = document.getElementById("postEmpty");
-      const articleEl = document.getElementById("postArticle");
+      const fabEl = document.getElementById("fabBookmark");
+      const fabLabelEl = fabEl.querySelector(".fab-bookmark-label");
+      const descriptionMetaEl = document.querySelector('meta[name="description"]');
 
-      async function loadPost() {
-        if (!postId) {
-          showEmpty();
+      let loadToken = 0;
+      let currentPost = null;
+      let bookmarks = window.SiteStore.readList(BOOKMARK_KEY);
+      let bookmarkedIds = new Set(bookmarks.map((post) => post.id));
+
+      function syncBookmarks(nextBookmarks) {
+        bookmarks = nextBookmarks;
+        bookmarkedIds = new Set(nextBookmarks.map((post) => post.id));
+      }
+
+      function getBookmarkLabel(isActive) {
+        return isActive ? "\u5df2\u6536\u85cf" : "\u6536\u85cf";
+      }
+
+      function saveReadingHistory(post) {
+        const entries = window.SiteStore
+          .readList(READING_HISTORY_KEY)
+          .filter((item) => item.id !== post.id);
+
+        entries.unshift({
+          id: post.id,
+          title: post.title,
+          category: post.category,
+          timestamp: Date.now(),
+        });
+
+        window.SiteStore.writeList(READING_HISTORY_KEY, entries.slice(0, 100));
+      }
+
+      function updateBookmarkUI() {
+        if (!currentPost) {
+          fabEl.style.display = "none";
           return;
         }
 
-        try {
-          const post = await NotionAPI.getPost(postId);
+        const isActive = bookmarkedIds.has(currentPost.id);
+        fabEl.style.display = "flex";
+        fabEl.classList.toggle("bookmarked", isActive);
+        fabLabelEl.textContent = getBookmarkLabel(isActive);
+        fabEl.setAttribute("aria-label", getBookmarkLabel(isActive));
+      }
 
-          if (!post) {
-            showEmpty();
-            return;
-          }
+      function toggleBookmark(post) {
+        const isActive = bookmarkedIds.has(post.id);
+        if (isActive) {
+          const nextBookmarks = bookmarks.filter((item) => item.id !== post.id);
+          syncBookmarks(nextBookmarks);
+          window.SiteStore.writeList(BOOKMARK_KEY, nextBookmarks);
+          return false;
+        }
 
-        // Update page title
-        document.title = `${post.title} — Share Everything`;
-        document.querySelector('meta[name="description"]').content = post.excerpt || post.title;
+        const nextBookmarks = [
+          {
+            id: post.id,
+            title: post.title,
+            category: post.category,
+            excerpt: post.excerpt || "",
+            date: post.date || "",
+            readTime: post.readTime || "",
+            coverImage: post.coverImage || null,
+            coverEmoji: post.coverEmoji || "\ud83d\udcd8",
+            coverGradient: post.coverGradient || null,
+            timestamp: Date.now(),
+          },
+          ...bookmarks.filter((item) => item.id !== post.id),
+        ];
 
-        // Category color
-        const catColor = NotionAPI.getCategoryColor(post.category);
+        syncBookmarks(nextBookmarks);
+        window.SiteStore.writeList(BOOKMARK_KEY, nextBookmarks);
+        return true;
+      }
+
+      function showEmpty() {
+        skeletonEl.style.display = "none";
+        contentEl.style.display = "none";
+        fabEl.style.display = "none";
+        backButtonEl.style.display = "none";
+        emptyEl.style.display = "flex";
+      }
+
+      function renderPost(post) {
         const esc = NotionAPI.escapeHtml;
-
-        // Render post
+        const categoryColor = NotionAPI.getCategoryColor(post.category);
         const renderedContent = NotionAPI.renderBlocks(post.content || []);
+
+        document.title = `${post.title} - Share Everything`;
+        if (descriptionMetaEl) {
+          descriptionMetaEl.content = post.excerpt || post.title;
+        }
 
         contentEl.innerHTML = `
           <div class="post-header">
-            <div class="post-category" style="background: ${catColor.bg}; color: ${catColor.color}; border: 1px solid ${catColor.border};">
+            <div class="post-category" style="background: ${categoryColor.bg}; color: ${categoryColor.color}; border: 1px solid ${categoryColor.border};">
               ${esc(post.category)}
             </div>
             <h1 class="post-title">${esc(post.title)}</h1>
@@ -165,7 +231,7 @@
                 </svg>
                 ${esc(post.readTime)}
               </span>
-              ${post.tags ? `<span>${post.tags.map(t => `#${esc(t)}`).join(" ")}</span>` : ""}
+              ${post.tags?.length ? `<span>${post.tags.map((tag) => `#${esc(tag)}`).join(" ")}</span>` : ""}
             </div>
           </div>
           <div class="post-content">
@@ -173,113 +239,71 @@
           </div>
         `;
 
-        // Show content, hide skeleton
         skeletonEl.style.display = "none";
+        emptyEl.style.display = "none";
         contentEl.style.display = "block";
         contentEl.style.animation = "fadeInUp 0.6s ease both";
+      }
 
-        // Save reading history
-        saveReadingHistory(post);
+      async function loadPost() {
+        const token = ++loadToken;
 
-        // Show bookmark button
-        initBookmark(post);
+        if (!postId) {
+          showEmpty();
+          return;
+        }
+
+        try {
+          const post = await NotionAPI.getPost(postId);
+          if (token !== loadToken) {
+            return;
+          }
+
+          if (!post) {
+            showEmpty();
+            return;
+          }
+
+          currentPost = post;
+          renderPost(post);
+          saveReadingHistory(post);
+          updateBookmarkUI();
         } catch (error) {
+          if (token !== loadToken) {
+            return;
+          }
+
           console.error("Failed to load post:", error);
           showEmpty();
         }
       }
 
-      function showEmpty() {
-        skeletonEl.style.display = "none";
-        articleEl.querySelector(".post-back").style.display = "none";
-        emptyEl.style.display = "flex";
-      }
-
-      /* ===== Reading History ===== */
-      function saveReadingHistory(post) {
-        try {
-          const entries = JSON.parse(localStorage.getItem("reading_history") || "[]");
-          // Remove duplicate
-          const filtered = entries.filter((h) => h.id !== post.id);
-          filtered.unshift({
-            id: post.id,
-            title: post.title,
-            category: post.category,
-            timestamp: Date.now(),
-          });
-          localStorage.setItem("reading_history", JSON.stringify(filtered.slice(0, 100)));
-        } catch (e) {
-          // localStorage not available
-        }
-      }
-
-      /* ===== Bookmark (收藏) ===== */
-      const BOOKMARK_KEY = "bookmarked_posts";
-
-      function getBookmarks() {
-        try {
-          return JSON.parse(localStorage.getItem(BOOKMARK_KEY) || "[]");
-        } catch (e) { return []; }
-      }
-
-      function isBookmarked(id) {
-        return getBookmarks().some(b => b.id === id);
-      }
-
-      function toggleBookmark(post) {
-        let bookmarks = getBookmarks();
-        const exists = bookmarks.some(b => b.id === post.id);
-
-        if (exists) {
-          bookmarks = bookmarks.filter(b => b.id !== post.id);
-        } else {
-          bookmarks.unshift({
-            id: post.id,
-            title: post.title,
-            category: post.category,
-            excerpt: post.excerpt || "",
-            date: post.date || "",
-            readTime: post.readTime || "",
-            coverImage: post.coverImage || null,
-            coverEmoji: post.coverEmoji || "📝",
-            coverGradient: post.coverGradient || null,
-            timestamp: Date.now(),
-          });
+      backButtonEl.addEventListener("click", () => {
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
         }
 
-        try {
-          localStorage.setItem(BOOKMARK_KEY, JSON.stringify(bookmarks));
-        } catch (e) {}
+        window.location.href = "blog.html";
+      });
 
-        return !exists; // return new state
-      }
-
-      function initBookmark(post) {
-        const fab = document.getElementById("fabBookmark");
-        const label = fab.querySelector(".fab-bookmark-label");
-        fab.style.display = "flex";
-
-        // Set initial state
-        if (isBookmarked(post.id)) {
-          fab.classList.add("bookmarked");
-          label.textContent = "已收藏";
+      fabEl.addEventListener("click", () => {
+        if (!currentPost) {
+          return;
         }
 
-        fab.addEventListener("click", () => {
-          const nowBookmarked = toggleBookmark(post);
+        const isActive = toggleBookmark(currentPost);
+        updateBookmarkUI();
 
-          // Update UI
-          fab.classList.toggle("bookmarked", nowBookmarked);
-          label.textContent = nowBookmarked ? "已收藏" : "收藏";
+        fabEl.classList.remove("bounce");
+        void fabEl.offsetWidth;
+        fabEl.classList.add("bounce");
 
-          // Bounce animation
-          fab.classList.remove("bounce");
-          void fab.offsetWidth; // force reflow
-          fab.classList.add("bounce");
-        });
-      }
+        if (!isActive) {
+          fabEl.blur();
+        }
+      });
 
-      /* ===== Init ===== */
       loadPost();
     </script>
   </body>
